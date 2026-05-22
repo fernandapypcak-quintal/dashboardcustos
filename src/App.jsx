@@ -4,12 +4,14 @@ import Sidebar from './components/layout/Sidebar.jsx'
 import Home from './components/pages/Home.jsx'
 import ContasPagar from './components/pages/ContasPagar.jsx'
 import CustoFixo from './components/pages/CustoFixo.jsx'
+import CustoVariavel from './components/pages/CustoVariavel.jsx'
 import Evolucao from './components/pages/Evolucao.jsx'
 
 const PAGES = {
-  home: <Home />,
-  contas: <ContasPagar />,
-  custos: <CustoFixo />,
+  home:     <Home />,
+  contas:   <ContasPagar />,
+  custos:   <CustoFixo />,
+  variavel: <CustoVariavel />,
   evolucao: <Evolucao />,
 }
 

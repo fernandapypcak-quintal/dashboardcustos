@@ -1,10 +1,11 @@
 import React from 'react'
-import { LayoutDashboard, CreditCard, TrendingUp, BarChart3, ChefHat } from 'lucide-react'
+import { LayoutDashboard, CreditCard, TrendingUp, BarChart3, ChefHat, TrendingDown } from 'lucide-react'
 
 const NAV = [
   { id: 'home', label: 'Visão Geral', icon: LayoutDashboard },
   { id: 'contas', label: 'Contas a Pagar', icon: CreditCard },
   { id: 'custos', label: 'Custo Fixo', icon: TrendingUp },
+  { id: 'variavel', label: 'Custo Variável', icon: TrendingDown },
   { id: 'evolucao', label: 'Evolução', icon: BarChart3 },
 ]
 
