@@ -4,9 +4,9 @@
 // =============================================================
 
 export const APPS_SCRIPT_URL =
-  'https://script.google.com/macros/s/SEU_ID_AQUI/exec'
+  'https://script.google.com/macros/s/AKfycbxVXc8MXLItuTmgRP8v2dlQj4UNyQSEHfX-snfAPfL5JBgrjhNIOsb4DikFrDm7H8OX/exec'
 
-export const LOJAS = ['Todas', 'Loja Centro', 'Loja Sul', 'Loja Norte']
+export const LOJAS = ['Todas', 'Holding', 'Carinas', 'Lapa', 'Figueiras', 'Chácara', 'Madalena', 'Mariana', 'Pavão', 'Perdizes', 'Santana', 'Tatuapé']
 
 export const MESES = [
   'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
