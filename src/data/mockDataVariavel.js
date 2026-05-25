@@ -63,3 +63,61 @@ export const MOCK_HISTORICO_VARIAVEL = [
   { mes: 'Fev/25', loja: 'Loja Norte',  total_realizado: 46200, total_orcado: 46000 },
   { mes: 'Mar/25', loja: 'Loja Norte',  total_realizado: 56060, total_orcado: 52350 },
 ]
+
+// =============================================================
+//  HISTÓRICO POR CATEGORIA — Custo Variável (6 meses, por loja)
+// =============================================================
+export const MOCK_HISTORICO_CAT_VARIAVEL = [
+  // Loja Centro
+  { mes: 'Out/24', loja: 'Loja Centro', categoria: 'CMV',                  realizado: 43000 },
+  { mes: 'Out/24', loja: 'Loja Centro', categoria: 'Comissões',             realizado: 4800  },
+  { mes: 'Out/24', loja: 'Loja Centro', categoria: 'Embalagens',            realizado: 2300  },
+  { mes: 'Out/24', loja: 'Loja Centro', categoria: 'Mão de obra variável',  realizado: 2800  },
+
+  { mes: 'Nov/24', loja: 'Loja Centro', categoria: 'CMV',                  realizado: 46200 },
+  { mes: 'Nov/24', loja: 'Loja Centro', categoria: 'Comissões',             realizado: 5100  },
+  { mes: 'Nov/24', loja: 'Loja Centro', categoria: 'Embalagens',            realizado: 2500  },
+  { mes: 'Nov/24', loja: 'Loja Centro', categoria: 'Mão de obra variável',  realizado: 3100  },
+
+  { mes: 'Dez/24', loja: 'Loja Centro', categoria: 'CMV',                  realizado: 54000 },
+  { mes: 'Dez/24', loja: 'Loja Centro', categoria: 'Comissões',             realizado: 6200  },
+  { mes: 'Dez/24', loja: 'Loja Centro', categoria: 'Embalagens',            realizado: 3100  },
+  { mes: 'Dez/24', loja: 'Loja Centro', categoria: 'Mão de obra variável',  realizado: 4800  },
+
+  { mes: 'Jan/25', loja: 'Loja Centro', categoria: 'CMV',                  realizado: 42500 },
+  { mes: 'Jan/25', loja: 'Loja Centro', categoria: 'Comissões',             realizado: 4600  },
+  { mes: 'Jan/25', loja: 'Loja Centro', categoria: 'Embalagens',            realizado: 2200  },
+  { mes: 'Jan/25', loja: 'Loja Centro', categoria: 'Mão de obra variável',  realizado: 2400  },
+
+  { mes: 'Fev/25', loja: 'Loja Centro', categoria: 'CMV',                  realizado: 41200 },
+  { mes: 'Fev/25', loja: 'Loja Centro', categoria: 'Comissões',             realizado: 4400  },
+  { mes: 'Fev/25', loja: 'Loja Centro', categoria: 'Embalagens',            realizado: 2100  },
+  { mes: 'Fev/25', loja: 'Loja Centro', categoria: 'Mão de obra variável',  realizado: 2200  },
+
+  { mes: 'Mar/25', loja: 'Loja Centro', categoria: 'CMV',                  realizado: 50550 },
+  { mes: 'Mar/25', loja: 'Loja Centro', categoria: 'Comissões',             realizado: 5250  },
+  { mes: 'Mar/25', loja: 'Loja Centro', categoria: 'Embalagens',            realizado: 2680  },
+  { mes: 'Mar/25', loja: 'Loja Centro', categoria: 'Mão de obra variável',  realizado: 3700  },
+
+  // Loja Sul
+  { mes: 'Fev/25', loja: 'Loja Sul', categoria: 'CMV',                  realizado: 32500 },
+  { mes: 'Fev/25', loja: 'Loja Sul', categoria: 'Comissões',             realizado: 3400  },
+  { mes: 'Fev/25', loja: 'Loja Sul', categoria: 'Embalagens',            realizado: 1700  },
+  { mes: 'Fev/25', loja: 'Loja Sul', categoria: 'Mão de obra variável',  realizado: 1900  },
+
+  { mes: 'Mar/25', loja: 'Loja Sul', categoria: 'CMV',                  realizado: 39800 },
+  { mes: 'Mar/25', loja: 'Loja Sul', categoria: 'Comissões',             realizado: 4050  },
+  { mes: 'Mar/25', loja: 'Loja Sul', categoria: 'Embalagens',            realizado: 2090  },
+  { mes: 'Mar/25', loja: 'Loja Sul', categoria: 'Mão de obra variável',  realizado: 2500  },
+
+  // Loja Norte
+  { mes: 'Fev/25', loja: 'Loja Norte', categoria: 'CMV',                  realizado: 36200 },
+  { mes: 'Fev/25', loja: 'Loja Norte', categoria: 'Comissões',             realizado: 3900  },
+  { mes: 'Fev/25', loja: 'Loja Norte', categoria: 'Embalagens',            realizado: 1900  },
+  { mes: 'Fev/25', loja: 'Loja Norte', categoria: 'Mão de obra variável',  realizado: 2100  },
+
+  { mes: 'Mar/25', loja: 'Loja Norte', categoria: 'CMV',                  realizado: 44600 },
+  { mes: 'Mar/25', loja: 'Loja Norte', categoria: 'Comissões',             realizado: 4780  },
+  { mes: 'Mar/25', loja: 'Loja Norte', categoria: 'Embalagens',            realizado: 2480  },
+  { mes: 'Mar/25', loja: 'Loja Norte', categoria: 'Mão de obra variável',  realizado: 3100  },
+]

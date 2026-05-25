@@ -93,3 +93,98 @@ export const MOCK_HISTORICO = [
   { mes: 'Fev/25', loja: 'Loja Norte', total_realizado: 39800, total_orcado: 40000 },
   { mes: 'Mar/25', loja: 'Loja Norte', total_realizado: 42660, total_orcado: 40600 },
 ]
+
+// =============================================================
+//  HISTÓRICO POR CATEGORIA — Custo Fixo (6 meses, por loja)
+//  Estrutura: { mes, loja, categoria, realizado }
+// =============================================================
+export const MOCK_HISTORICO_CAT_FIXO = [
+  // Loja Centro
+  { mes: 'Out/24', loja: 'Loja Centro', categoria: 'Aluguel',    realizado: 8500  },
+  { mes: 'Out/24', loja: 'Loja Centro', categoria: 'Energia',    realizado: 2800  },
+  { mes: 'Out/24', loja: 'Loja Centro', categoria: 'Folha',      realizado: 25000 },
+  { mes: 'Out/24', loja: 'Loja Centro', categoria: 'Marketing',  realizado: 1800  },
+  { mes: 'Out/24', loja: 'Loja Centro', categoria: 'Manutenção', realizado: 600   },
+  { mes: 'Out/24', loja: 'Loja Centro', categoria: 'Software',   realizado: 890   },
+  { mes: 'Out/24', loja: 'Loja Centro', categoria: 'Contador',   realizado: 1500  },
+  { mes: 'Out/24', loja: 'Loja Centro', categoria: 'Outros',     realizado: 420   },
+
+  { mes: 'Nov/24', loja: 'Loja Centro', categoria: 'Aluguel',    realizado: 8500  },
+  { mes: 'Nov/24', loja: 'Loja Centro', categoria: 'Energia',    realizado: 3100  },
+  { mes: 'Nov/24', loja: 'Loja Centro', categoria: 'Folha',      realizado: 26500 },
+  { mes: 'Nov/24', loja: 'Loja Centro', categoria: 'Marketing',  realizado: 2200  },
+  { mes: 'Nov/24', loja: 'Loja Centro', categoria: 'Manutenção', realizado: 900   },
+  { mes: 'Nov/24', loja: 'Loja Centro', categoria: 'Software',   realizado: 890   },
+  { mes: 'Nov/24', loja: 'Loja Centro', categoria: 'Contador',   realizado: 1500  },
+  { mes: 'Nov/24', loja: 'Loja Centro', categoria: 'Outros',     realizado: 420   },
+
+  { mes: 'Dez/24', loja: 'Loja Centro', categoria: 'Aluguel',    realizado: 8500  },
+  { mes: 'Dez/24', loja: 'Loja Centro', categoria: 'Energia',    realizado: 3800  },
+  { mes: 'Dez/24', loja: 'Loja Centro', categoria: 'Folha',      realizado: 31000 },
+  { mes: 'Dez/24', loja: 'Loja Centro', categoria: 'Marketing',  realizado: 3200  },
+  { mes: 'Dez/24', loja: 'Loja Centro', categoria: 'Manutenção', realizado: 1400  },
+  { mes: 'Dez/24', loja: 'Loja Centro', categoria: 'Software',   realizado: 890   },
+  { mes: 'Dez/24', loja: 'Loja Centro', categoria: 'Contador',   realizado: 1500  },
+  { mes: 'Dez/24', loja: 'Loja Centro', categoria: 'Outros',     realizado: 420   },
+
+  { mes: 'Jan/25', loja: 'Loja Centro', categoria: 'Aluguel',    realizado: 8500  },
+  { mes: 'Jan/25', loja: 'Loja Centro', categoria: 'Energia',    realizado: 2900  },
+  { mes: 'Jan/25', loja: 'Loja Centro', categoria: 'Folha',      realizado: 26000 },
+  { mes: 'Jan/25', loja: 'Loja Centro', categoria: 'Marketing',  realizado: 2000  },
+  { mes: 'Jan/25', loja: 'Loja Centro', categoria: 'Manutenção', realizado: 500   },
+  { mes: 'Jan/25', loja: 'Loja Centro', categoria: 'Software',   realizado: 890   },
+  { mes: 'Jan/25', loja: 'Loja Centro', categoria: 'Contador',   realizado: 1500  },
+  { mes: 'Jan/25', loja: 'Loja Centro', categoria: 'Outros',     realizado: 420   },
+
+  { mes: 'Fev/25', loja: 'Loja Centro', categoria: 'Aluguel',    realizado: 8500  },
+  { mes: 'Fev/25', loja: 'Loja Centro', categoria: 'Energia',    realizado: 2750  },
+  { mes: 'Fev/25', loja: 'Loja Centro', categoria: 'Folha',      realizado: 25800 },
+  { mes: 'Fev/25', loja: 'Loja Centro', categoria: 'Marketing',  realizado: 2000  },
+  { mes: 'Fev/25', loja: 'Loja Centro', categoria: 'Manutenção', realizado: 650   },
+  { mes: 'Fev/25', loja: 'Loja Centro', categoria: 'Software',   realizado: 890   },
+  { mes: 'Fev/25', loja: 'Loja Centro', categoria: 'Contador',   realizado: 1500  },
+  { mes: 'Fev/25', loja: 'Loja Centro', categoria: 'Outros',     realizado: 420   },
+
+  { mes: 'Mar/25', loja: 'Loja Centro', categoria: 'Aluguel',    realizado: 8500  },
+  { mes: 'Mar/25', loja: 'Loja Centro', categoria: 'Energia',    realizado: 3200  },
+  { mes: 'Mar/25', loja: 'Loja Centro', categoria: 'Folha',      realizado: 28000 },
+  { mes: 'Mar/25', loja: 'Loja Centro', categoria: 'Marketing',  realizado: 2400  },
+  { mes: 'Mar/25', loja: 'Loja Centro', categoria: 'Manutenção', realizado: 1200  },
+  { mes: 'Mar/25', loja: 'Loja Centro', categoria: 'Software',   realizado: 890   },
+  { mes: 'Mar/25', loja: 'Loja Centro', categoria: 'Contador',   realizado: 1500  },
+  { mes: 'Mar/25', loja: 'Loja Centro', categoria: 'Outros',     realizado: 420   },
+
+  // Loja Sul
+  { mes: 'Fev/25', loja: 'Loja Sul', categoria: 'Aluguel',    realizado: 6200  },
+  { mes: 'Fev/25', loja: 'Loja Sul', categoria: 'Energia',    realizado: 2600  },
+  { mes: 'Fev/25', loja: 'Loja Sul', categoria: 'Folha',      realizado: 21000 },
+  { mes: 'Fev/25', loja: 'Loja Sul', categoria: 'Marketing',  realizado: 1700  },
+  { mes: 'Fev/25', loja: 'Loja Sul', categoria: 'Manutenção', realizado: 400   },
+  { mes: 'Fev/25', loja: 'Loja Sul', categoria: 'Software',   realizado: 890   },
+  { mes: 'Fev/25', loja: 'Loja Sul', categoria: 'Contador',   realizado: 1500  },
+
+  { mes: 'Mar/25', loja: 'Loja Sul', categoria: 'Aluguel',    realizado: 6200  },
+  { mes: 'Mar/25', loja: 'Loja Sul', categoria: 'Energia',    realizado: 2800  },
+  { mes: 'Mar/25', loja: 'Loja Sul', categoria: 'Folha',      realizado: 22000 },
+  { mes: 'Mar/25', loja: 'Loja Sul', categoria: 'Marketing',  realizado: 1800  },
+  { mes: 'Mar/25', loja: 'Loja Sul', categoria: 'Manutenção', realizado: 780   },
+  { mes: 'Mar/25', loja: 'Loja Sul', categoria: 'Software',   realizado: 890   },
+  { mes: 'Mar/25', loja: 'Loja Sul', categoria: 'Contador',   realizado: 1500  },
+
+  // Loja Norte
+  { mes: 'Fev/25', loja: 'Loja Norte', categoria: 'Aluguel',    realizado: 7100  },
+  { mes: 'Fev/25', loja: 'Loja Norte', categoria: 'Energia',    realizado: 2800  },
+  { mes: 'Fev/25', loja: 'Loja Norte', categoria: 'Folha',      realizado: 23000 },
+  { mes: 'Fev/25', loja: 'Loja Norte', categoria: 'Marketing',  realizado: 1900  },
+  { mes: 'Fev/25', loja: 'Loja Norte', categoria: 'Manutenção', realizado: 300   },
+  { mes: 'Fev/25', loja: 'Loja Norte', categoria: 'Software',   realizado: 1500  },
+  { mes: 'Fev/25', loja: 'Loja Norte', categoria: 'Contador',   realizado: 1500  },
+
+  { mes: 'Mar/25', loja: 'Loja Norte', categoria: 'Aluguel',    realizado: 7100  },
+  { mes: 'Mar/25', loja: 'Loja Norte', categoria: 'Energia',    realizado: 2950  },
+  { mes: 'Mar/25', loja: 'Loja Norte', categoria: 'Folha',      realizado: 25000 },
+  { mes: 'Mar/25', loja: 'Loja Norte', categoria: 'Marketing',  realizado: 2100  },
+  { mes: 'Mar/25', loja: 'Loja Norte', categoria: 'Manutenção', realizado: 950   },
+  { mes: 'Mar/25', loja: 'Loja Norte', categoria: 'Software',   realizado: 2090  },
+  { mes: 'Mar/25', loja: 'Loja Norte', categoria: 'Contador',   realizado: 1500  },
+]
