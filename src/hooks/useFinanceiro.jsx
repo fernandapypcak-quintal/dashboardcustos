@@ -7,22 +7,52 @@ import {
 
 const FinanceiroCtx = createContext(null)
 
+// Normaliza qualquer formato de mês para YYYY-MM
+function normalizarMes(raw) {
+  if (!raw) return ''
+  const s = String(raw).trim()
+
+  // Já está no formato YYYY-MM
+  if (/^\d{4}-\d{2}$/.test(s)) return s
+
+  // Formato YYYY-MM-DD — pega só o prefixo
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0, 7)
+
+  // Objeto Date serializado ou string com GMT (ex: "Fri May 01 2026 04:00:00 GMT-0300...")
+  const d = new Date(s)
+  if (!isNaN(d.getTime())) {
+    const ano = d.getFullYear()
+    const mes = String(d.getMonth() + 1).padStart(2, '0')
+    return `${ano}-${mes}`
+  }
+
+  return s
+}
+
+// Label legível: 2025-05 → Mai/25
+function mesLabelDe(mesStr) {
+  if (!mesStr || mesStr.length < 7) return mesStr
+  const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+  const [ano, mes] = mesStr.split('-')
+  return `${MESES[parseInt(mes) - 1]}/${ano.substring(2)}`
+}
+
 export function FinanceiroProvider({ children }) {
-  const [contas,              setContas]              = useState([])
-  const [custosFixos,         setCustosFixos]         = useState([])
-  const [custosVariaveis,     setCustosVariaveis]     = useState([])
-  const [historico,           setHistorico]           = useState([])
-  const [historicoVariavel,   setHistoricoVariavel]   = useState([])
-  const [historicoCatFixo,    setHistoricoCatFixo]    = useState([])
-  const [historicoCatVariavel,setHistoricoCatVariavel]= useState([])
+  const [contas,               setContas]               = useState([])
+  const [custosFixos,          setCustosFixos]          = useState([])
+  const [custosVariaveis,      setCustosVariaveis]      = useState([])
+  const [historico,            setHistorico]            = useState([])
+  const [historicoVariavel,    setHistoricoVariavel]    = useState([])
+  const [historicoCatFixo,     setHistoricoCatFixo]     = useState([])
+  const [historicoCatVariavel, setHistoricoCatVariavel] = useState([])
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState(null)
 
   const [lojaFiltro, setLojaFiltro] = useState('Todas')
-  const [mesFiltro,  setMesFiltro]  = useState('')  // vazio = todos os meses
+  const [mesFiltro,  setMesFiltro]  = useState('')
 
   useEffect(() => {
-    console.log('[Financeiro] Iniciando carregamento...')
+    console.log('[Financeiro] Carregando...')
     Promise.all([
       loadContas(),
       loadCustosFixos(),
@@ -32,54 +62,59 @@ export function FinanceiroProvider({ children }) {
       loadHistoricoCatFixo(),
       loadHistoricoCatVariavel(),
     ]).then(([c, cf, cv, h, hv, hcf, hcv]) => {
-      console.log('[Financeiro] Dados recebidos:', {
-        contas: c.length,
-        custosFixos: cf.length,
-        custosVariaveis: cv.length,
-        historico: h.length,
-        historicoVariavel: hv.length,
-        historicoCatFixo: hcf.length,
-        historicoCatVariavel: hcv.length,
+
+      // Normaliza campo mes em todos os arrays de custo
+      const normCustos = arr => arr.map(x => ({ ...x, mes: normalizarMes(x.mes) }))
+      const normHist   = arr => arr.map(x => ({ ...x, mes: normalizarMes(x.mes) }))
+
+      const cfN  = normCustos(cf)
+      const cvN  = normCustos(cv)
+      const hN   = normHist(h)
+      const hvN  = normHist(hv)
+      const hcfN = normHist(hcf)
+      const hcvN = normHist(hcv)
+
+      // Mês padrão = mais recente disponível
+      const mesesDisp = [...new Set([...cfN, ...cvN].map(x => x.mes).filter(Boolean))].sort()
+      const mesPadrao = mesesDisp[mesesDisp.length - 1] || ''
+
+      console.log('[Financeiro] OK:', {
+        contas: c.length, custosFixos: cfN.length,
+        custosVariaveis: cvN.length, mesesDisponiveis: mesesDisp,
+        mesPadrao,
       })
 
-      // Define o mês padrão como o mais recente disponível
-      const mesesDisponiveis = [...new Set([...cf, ...cv].map(x => x.mes))].sort()
-      const mesPadrao = mesesDisponiveis[mesesDisponiveis.length - 1] || ''
-
       setContas(c)
-      setCustosFixos(cf)
-      setCustosVariaveis(cv)
-      setHistorico(h)
-      setHistoricoVariavel(hv)
-      setHistoricoCatFixo(hcf)
-      setHistoricoCatVariavel(hcv)
+      setCustosFixos(cfN)
+      setCustosVariaveis(cvN)
+      setHistorico(hN)
+      setHistoricoVariavel(hvN)
+      setHistoricoCatFixo(hcfN)
+      setHistoricoCatVariavel(hcvN)
       setMesFiltro(mesPadrao)
     })
-    .catch((e) => {
-      console.error('[Financeiro] Erro:', e)
-      setError(e.message)
-    })
+    .catch(e => { console.error('[Financeiro] Erro:', e); setError(e.message) })
     .finally(() => setLoading(false))
   }, [])
 
-  // ── Filtros ──────────────────────────────────────────────────
+  // ── Filtros ────────────────────────────────────────────────
+  // Contas NÃO filtram por mês — são sempre o mês corrente da aba Baixas
   const contasFiltradas = useMemo(() => {
-    let r = contas
-    if (lojaFiltro !== 'Todas') r = r.filter(c => c.centro === lojaFiltro)
-    return r
+    if (lojaFiltro === 'Todas') return contas
+    return contas.filter(c => c.centro === lojaFiltro)
   }, [contas, lojaFiltro])
 
   const custosFiltrados = useMemo(() => {
     let r = custosFixos
     if (lojaFiltro !== 'Todas') r = r.filter(c => c.loja === lojaFiltro)
-    if (mesFiltro) r = r.filter(c => c.mes === mesFiltro)
+    if (mesFiltro)               r = r.filter(c => c.mes === mesFiltro)
     return r
   }, [custosFixos, lojaFiltro, mesFiltro])
 
   const custosVariaveisFiltrados = useMemo(() => {
     let r = custosVariaveis
     if (lojaFiltro !== 'Todas') r = r.filter(c => c.loja === lojaFiltro)
-    if (mesFiltro) r = r.filter(c => c.mes === mesFiltro)
+    if (mesFiltro)               r = r.filter(c => c.mes === mesFiltro)
     return r
   }, [custosVariaveis, lojaFiltro, mesFiltro])
 
@@ -99,22 +134,21 @@ export function FinanceiroProvider({ children }) {
     lojaFiltro === 'Todas' ? historicoCatVariavel : historicoCatVariavel.filter(h => h.loja === lojaFiltro)
   ), [historicoCatVariavel, lojaFiltro])
 
-  // ── Meses disponíveis (para selector) ───────────────────────
+  // Meses disponíveis normalizados com label legível
   const mesesDisponiveis = useMemo(() => {
     const set = new Set([...custosFixos, ...custosVariaveis].map(x => x.mes).filter(Boolean))
-    return [...set].sort()
+    return [...set].sort().map(m => ({ value: m, label: mesLabelDe(m) }))
   }, [custosFixos, custosVariaveis])
 
-  // ── KPIs ─────────────────────────────────────────────────────
+  // ── KPIs ────────────────────────────────────────────────────
   const kpis = useMemo(() => {
-    const hoje   = new Date(); hoje.setHours(0,0,0,0)
-    const em7d   = new Date(hoje.getTime() + 7 * 86400000)
-    const totalAPagar   = contasFiltradas.filter(c => c.status !== 'pago').reduce((s,c) => s+c.valor, 0)
-    const totalVencido  = contasFiltradas.filter(c => c.status === 'vencido').reduce((s,c) => s+c.valor, 0)
-    const aVencer7d     = contasFiltradas.filter(c => {
+    const hoje  = new Date(); hoje.setHours(0,0,0,0)
+    const em7d  = new Date(hoje.getTime() + 7 * 86400000)
+    const totalAPagar    = contasFiltradas.filter(c => c.status !== 'pago').reduce((s,c) => s+c.valor, 0)
+    const totalVencido   = contasFiltradas.filter(c => c.status === 'vencido').reduce((s,c) => s+c.valor, 0)
+    const aVencer7d      = contasFiltradas.filter(c => {
       if (c.status === 'pago') return false
-      const d = new Date(c.vencimento)
-      return d >= hoje && d <= em7d
+      const d = new Date(c.vencimento); return d >= hoje && d <= em7d
     }).reduce((s,c) => s+c.valor, 0)
     const orcadoTotal    = custosFiltrados.reduce((s,c) => s+c.orcado,    0)
     const realizadoTotal = custosFiltrados.reduce((s,c) => s+c.realizado, 0)
