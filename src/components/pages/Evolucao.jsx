@@ -3,194 +3,283 @@ import { useFinanceiro } from '../../hooks/useFinanceiro.jsx'
 import Header from '../layout/Header.jsx'
 import { fmt, fmtPct } from '../../utils.js'
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer, BarChart, Bar, Cell,
+  AreaChart, Area, LineChart, Line, BarChart, Bar,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell
 } from 'recharts'
 
-const CORES_LOJAS = { 'Loja Centro': '#0D0D0D', 'Loja Sul': '#97A624', 'Loja Norte': '#D9B504' }
+const ORDEM = ['Jan/24','Fev/24','Mar/24','Abr/24','Mai/24','Jun/24','Jul/24','Ago/24','Set/24','Out/24','Nov/24','Dez/24',
+               'Jan/25','Fev/25','Mar/25','Abr/25','Mai/25','Jun/25','Jul/25','Ago/25','Set/25','Out/25','Nov/25','Dez/25',
+               'Jan/26','Fev/26','Mar/26','Abr/26','Mai/26','Jun/26','Jul/26','Ago/26','Set/26','Out/26','Nov/26','Dez/26']
+
+const CORES_LOJAS = ['#1a1a1a','#22c55e','#3b82f6','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316','#6366f1','#84cc16']
+const CORES_CAT   = ['#1a1a1a','#22c55e','#3b82f6','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6']
+
+function sortM(arr) {
+  return [...arr].sort((a,b)=>{
+    const ia=ORDEM.indexOf(a.mes),ib=ORDEM.indexOf(b.mes)
+    return (ia<0?999:ia)-(ib<0?999:ib)
+  })
+}
+
+function SecaoTitle({ title, sub }) {
+  return (
+    <div style={{ marginBottom:16 }}>
+      <div style={{ fontSize:15, fontWeight:700, color:'#1a1a1a' }}>{title}</div>
+      {sub && <div style={{ fontSize:12, color:'#999', marginTop:3 }}>{sub}</div>}
+    </div>
+  )
+}
+
+function VarBadge({ pct }) {
+  if (pct === 0) return <span style={{ fontSize:11, color:'#BBB' }}>—</span>
+  const color=pct>10?'#dc2626':pct>0?'#d97706':'#16a34a'
+  const bg=pct>10?'#FEF2F2':pct>0?'#FFFBEB':'#F0FDF4'
+  return <span style={{ display:'inline-block', padding:'2px 8px', borderRadius:99, fontSize:11, fontWeight:600, background:bg, color }}>{fmtPct(pct)}</span>
+}
 
 export default function Evolucao() {
-  const { historico, historicoFiltrado, lojaFiltro } = useFinanceiro()
-  const [metric, setMetric] = useState('realizado') // 'realizado' | 'orcado'
+  const {
+    historico, historicoVariavel,
+    historicoFiltrado, historicoVariavelFiltrado,
+    historicoCatFixoFiltrado, historicoCatVariavelFiltrado,
+    lojaFiltro,
+  } = useFinanceiro()
 
-  // Dados para o gráfico de linhas (por loja, série temporal)
-  const meses = useMemo(() => {
-    const set = new Set(historico.map((h) => h.mes))
-    return Array.from(set)
-  }, [historico])
+  // ── 1. Total consolidado (fixo + variável) ───────────────────
+  const consolidado = useMemo(() => {
+    const map = {}
+    const add = (arr, campo) => arr.forEach(({ mes, total_realizado }) => {
+      if (!map[mes]) map[mes] = { mes, fixo:0, variavel:0 }
+      map[mes][campo] += total_realizado
+    })
+    add(historicoFiltrado, 'fixo')
+    add(historicoVariavelFiltrado, 'variavel')
+    return sortM(Object.values(map)).map(r => ({ ...r, total: r.fixo + r.variavel }))
+  }, [historicoFiltrado, historicoVariavelFiltrado])
 
-  // Pivot: { mes, 'Loja Centro': val, 'Loja Sul': val, ... }
-  const lojas = useMemo(() => Array.from(new Set(historico.map((h) => h.loja))), [historico])
+  // ── 2. Por loja ao longo do tempo ────────────────────────────
+  const lojas = useMemo(() => Array.from(new Set([...historico,...historicoVariavel].map(h=>h.loja))), [historico,historicoVariavel])
+  const mesesHist = useMemo(() => sortM(Array.from(new Set([...historico,...historicoVariavel].map(h=>h.mes))).map(m=>({mes:m}))).map(x=>x.mes), [historico,historicoVariavel])
 
-  const dadosLinha = useMemo(() => {
-    return meses.map((mes) => {
+  const dadosPorLoja = useMemo(() => {
+    const allH = [...historico, ...historicoVariavel]
+    return mesesHist.map(mes => {
       const row = { mes }
-      lojas.forEach((loja) => {
-        const entry = historico.find((h) => h.mes === mes && h.loja === loja)
-        row[loja] = entry ? entry[metric] : 0
+      lojas.forEach(loja => {
+        const entries = allH.filter(h => h.mes === mes && h.loja === loja)
+        row[loja] = entries.reduce((s,h) => s + h.total_realizado, 0)
       })
       return row
     })
-  }, [meses, lojas, historico, metric])
+  }, [mesesHist, lojas, historico, historicoVariavel])
 
-  // Oscilação mês a mês (para a loja/total filtrado)
-  const oscilacao = useMemo(() => {
-    const map = {}
-    historicoFiltrado.forEach(({ mes, total_realizado, total_orcado }) => {
-      if (!map[mes]) map[mes] = { mes, realizado: 0, orcado: 0 }
-      map[mes].realizado += total_realizado
-      map[mes].orcado += total_orcado
+  // ── 3. Fixo separado por categoria ──────────────────────────
+  const catsFixo = useMemo(() => Array.from(new Set(historicoCatFixoFiltrado.map(h=>h.categoria))), [historicoCatFixoFiltrado])
+  const mesesFixo = useMemo(() => sortM(Array.from(new Set(historicoCatFixoFiltrado.map(h=>h.mes))).map(m=>({mes:m}))).map(x=>x.mes), [historicoCatFixoFiltrado])
+  const dadosFixoCat = useMemo(() => mesesFixo.map(mes => {
+    const row = { mes }
+    catsFixo.forEach(cat => {
+      const entries = historicoCatFixoFiltrado.filter(h=>h.mes===mes&&h.categoria===cat)
+      row[cat] = entries.reduce((s,h)=>s+h.realizado,0)
     })
-    const lista = Object.values(map)
-    return lista.map((r, i) => {
-      const prev = lista[i - 1]
-      const variacao = prev && prev.realizado > 0 ? ((r.realizado - prev.realizado) / prev.realizado) * 100 : 0
-      return { ...r, variacao }
+    return row
+  }), [mesesFixo, catsFixo, historicoCatFixoFiltrado])
+
+  // ── 4. Variável separado por categoria ───────────────────────
+  const catsVar = useMemo(() => Array.from(new Set(historicoCatVariavelFiltrado.map(h=>h.categoria))), [historicoCatVariavelFiltrado])
+  const mesesVar = useMemo(() => sortM(Array.from(new Set(historicoCatVariavelFiltrado.map(h=>h.mes))).map(m=>({mes:m}))).map(x=>x.mes), [historicoCatVariavelFiltrado])
+  const dadosVarCat = useMemo(() => mesesVar.map(mes => {
+    const row = { mes }
+    catsVar.forEach(cat => {
+      const entries = historicoCatVariavelFiltrado.filter(h=>h.mes===mes&&h.categoria===cat)
+      row[cat] = entries.reduce((s,h)=>s+h.realizado,0)
     })
-  }, [historicoFiltrado])
+    return row
+  }), [mesesVar, catsVar, historicoCatVariavelFiltrado])
 
-  // Novos custos = itens que aparecem no último mês mas não no anterior (mock: simulado)
-  const novosCustos = useMemo(() => {
-    return [
-      { item: 'Licença App Delivery', loja: 'Loja Norte', valor: 1200, mes: 'Mar/25' },
-    ]
-  }, [])
+  // ── 5. Ranking categorias que mais cresceram (fixo+var) ──────
+  const ranking = useMemo(() => {
+    const todos = [...historicoCatFixoFiltrado, ...historicoCatVariavelFiltrado]
+    const cats  = Array.from(new Set(todos.map(h=>h.categoria)))
+    const meses = sortM(Array.from(new Set(todos.map(h=>h.mes))).map(m=>({mes:m}))).map(x=>x.mes)
+    const ult = meses[meses.length-1], prev = meses[meses.length-2]
+    if (!ult || !prev) return []
+    return cats.map(cat => {
+      const u = todos.filter(h=>h.mes===ult&&h.categoria===cat).reduce((s,h)=>s+h.realizado,0)
+      const p = todos.filter(h=>h.mes===prev&&h.categoria===cat).reduce((s,h)=>s+h.realizado,0)
+      return { categoria:cat, atual:u, anterior:p, difR:u-p, difPct:p>0?((u-p)/p)*100:0 }
+    }).filter(r=>r.atual>0||r.anterior>0).sort((a,b)=>b.difR-a.difR)
+  }, [historicoCatFixoFiltrado, historicoCatVariavelFiltrado])
 
-  const S = (ativo) => ({
-    padding: '5px 12px', borderRadius: 5, border: '1px solid #E8E8E2', cursor: 'pointer', fontSize: 12,
-    background: ativo ? '#0D0D0D' : '#fff', color: ativo ? '#fff' : '#4A4A3A', fontWeight: ativo ? 600 : 400,
-  })
+  // ── 6. Tabela resumo mensal consolidado ──────────────────────
+  const resumoMensal = useMemo(() => {
+    return consolidado.map((r,i) => {
+      const prev = i>0 ? consolidado[i-1] : null
+      const varR   = prev ? r.total - prev.total : 0
+      const varPct = prev && prev.total>0 ? (varR/prev.total)*100 : 0
+      return { ...r, varR, varPct }
+    })
+  }, [consolidado])
+
+  const TH = ({ch,right}) => <th style={{ fontSize:10, fontWeight:600, letterSpacing:'0.06em', textTransform:'uppercase', color:'#fff', background:'#1a1a1a', padding:'10px 14px', textAlign:right?'right':'left', whiteSpace:'nowrap' }}>{ch}</th>
 
   return (
-    <div>
-      <Header title="Evolução Histórica" />
-      <div style={{ padding: '20px 28px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div style={{ background:'#fff', minHeight:'100vh' }}>
+      <Header title="Evolução Histórica"/>
+      <div style={{ padding:'24px 28px', display:'flex', flexDirection:'column', gap:28 }}>
 
-        {/* Gráfico de linhas por loja */}
-        <div style={{ background: '#fff', border: '1px solid #E8E8E2', borderRadius: 8, padding: '16px 20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <span style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#8A8A7A' }}>
-              Custo Fixo por Loja — 6 meses
-            </span>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button style={S(metric === 'realizado')} onClick={() => setMetric('realizado')}>Realizado</button>
-              <button style={S(metric === 'orcado')} onClick={() => setMetric('orcado')}>Orçado</button>
-            </div>
+        {/* ── 1. Total Consolidado ── */}
+        <div>
+          <SecaoTitle title="Total Consolidado" sub="Fixo + Variável · evolução do custo total"/>
+          <div style={{ border:'1px solid #F0F0F0', borderRadius:12, padding:'20px 24px 16px' }}>
+            <ResponsiveContainer width="100%" height={220}>
+              <AreaChart data={consolidado} margin={{ top:4, right:4, left:0, bottom:0 }}>
+                <defs>
+                  <linearGradient id="gF2" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%"  stopColor="#1a1a1a" stopOpacity={0.08}/>
+                    <stop offset="95%" stopColor="#1a1a1a" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="gV2" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%"  stopColor="#22c55e" stopOpacity={0.15}/>
+                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" vertical={false}/>
+                <XAxis dataKey="mes" tick={{ fontSize:11, fill:'#BBB' }} axisLine={false} tickLine={false}/>
+                <YAxis tickFormatter={v=>`${(v/1000).toFixed(0)}k`} tick={{ fontSize:11, fill:'#BBB' }} axisLine={false} tickLine={false} width={48}/>
+                <Tooltip formatter={(v,n)=>[fmt(v),n==='fixo'?'Fixo':n==='variavel'?'Variável':'Total']} contentStyle={{ fontSize:12, border:'1px solid #F0F0F0', borderRadius:10 }}/>
+                <Legend formatter={n=>n==='fixo'?'Custo Fixo':n==='variavel'?'Custo Variável':'Total'} iconSize={8} wrapperStyle={{ fontSize:11 }}/>
+                <Area type="monotone" dataKey="variavel" stackId="1" stroke="#22c55e" strokeWidth={1.5} fill="url(#gV2)" dot={false}/>
+                <Area type="monotone" dataKey="fixo"     stackId="1" stroke="#1a1a1a" strokeWidth={2}   fill="url(#gF2)" dot={false}/>
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
-          <ResponsiveContainer width="100%" height={240}>
-            <LineChart data={dadosLinha} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#F0F0E8" />
-              <XAxis dataKey="mes" tick={{ fontSize: 11, fill: '#8A8A7A' }} axisLine={false} tickLine={false} />
-              <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11, fill: '#8A8A7A' }} axisLine={false} tickLine={false} width={44} />
-              <Tooltip formatter={(v) => fmt(v)} contentStyle={{ fontSize: 12, border: '1px solid #E8E8E2', borderRadius: 6 }} />
-              <Legend iconSize={10} wrapperStyle={{ fontSize: 12 }} />
-              {lojas.map((loja) => (
-                <Line
-                  key={loja}
-                  type="monotone"
-                  dataKey={loja}
-                  stroke={CORES_LOJAS[loja] || '#97A624'}
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
-                  activeDot={{ r: 5 }}
-                />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
 
-        {/* Oscilação mês a mês */}
-        <div style={{ background: '#fff', border: '1px solid #E8E8E2', borderRadius: 8, padding: '16px 20px' }}>
-          <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#8A8A7A', marginBottom: 16 }}>
-            Oscilação Mensal — {lojaFiltro}
-          </div>
-          <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={oscilacao} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#F0F0E8" vertical={false} />
-              <XAxis dataKey="mes" tick={{ fontSize: 11, fill: '#8A8A7A' }} axisLine={false} tickLine={false} />
-              <YAxis tickFormatter={(v) => `${v.toFixed(0)}%`} tick={{ fontSize: 11, fill: '#8A8A7A' }} axisLine={false} tickLine={false} width={40} />
-              <Tooltip formatter={(v) => [`${v.toFixed(2)}%`, 'Variação']} contentStyle={{ fontSize: 12, border: '1px solid #E8E8E2', borderRadius: 6 }} />
-              <Bar dataKey="variacao" radius={[3, 3, 0, 0]}>
-                {oscilacao.map((e, i) => (
-                  <Cell key={i} fill={e.variacao > 5 ? '#8C1414' : e.variacao > 0 ? '#D9B504' : '#97A624'} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Tabela de evolução */}
-        <div style={{ background: '#fff', border: '1px solid #E8E8E2', borderRadius: 8, overflow: 'hidden' }}>
-          <div style={{ padding: '12px 18px', borderBottom: '1px solid #E8E8E2' }}>
-            <span style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#8A8A7A' }}>
-              Resumo Mensal
-            </span>
-          </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                {['Mês', 'Orçado', 'Realizado', 'Variação Mês a Mês', 'vs Orçamento'].map((h) => (
-                  <th key={h} style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#fff', background: '#0D0D0D', padding: '10px 14px', textAlign: 'left' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {oscilacao.map((r, i) => {
-                const vsOrc = r.orcado > 0 ? ((r.realizado - r.orcado) / r.orcado) * 100 : 0
-                return (
-                  <tr key={i}>
-                    <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F0E8', fontWeight: 600 }}>{r.mes}</td>
-                    <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F0E8', fontFamily: "'DM Mono', monospace", color: '#6A6A5A' }}>{fmt(r.orcado)}</td>
-                    <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F0E8', fontFamily: "'DM Mono', monospace", fontWeight: 600 }}>{fmt(r.realizado)}</td>
-                    <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F0E8' }}>
-                      {i === 0 ? <span style={{ color: '#B0B0A0', fontSize: 12 }}>—</span> : (
-                        <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, fontWeight: 700, color: r.variacao > 5 ? '#8C1414' : r.variacao > 0 ? '#D9B504' : '#97A624' }}>
-                          {fmtPct(r.variacao)}
-                        </span>
-                      )}
-                    </td>
-                    <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F0E8' }}>
-                      <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, fontWeight: 700, color: vsOrc > 5 ? '#8C1414' : vsOrc > 0 ? '#D9B504' : '#97A624' }}>
-                        {fmtPct(vsOrc)}
-                      </span>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Novos Custos */}
-        {novosCustos.length > 0 && (
-          <div style={{ background: '#fff', border: '1px solid #E8E8E2', borderRadius: 8, overflow: 'hidden' }}>
-            <div style={{ padding: '12px 18px', borderBottom: '1px solid #E8E8E2', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#8A8A7A' }}>
-                Novos Custos (última competência)
-              </span>
-              <span style={{ background: '#EEF5D5', color: '#5A6A10', fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20 }}>
-                {novosCustos.length} novo{novosCustos.length > 1 ? 's' : ''}
-              </span>
-            </div>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr>
-                  {['Item', 'Loja', 'Mês de Entrada', 'Valor'].map((h) => (
-                    <th key={h} style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#fff', background: '#0D0D0D', padding: '10px 14px', textAlign: 'left' }}>{h}</th>
+          {/* Tabela resumo */}
+          <div style={{ border:'1px solid #F0F0F0', borderRadius:12, overflow:'hidden', marginTop:14 }}>
+            <div style={{ padding:'14px 20px', borderBottom:'1px solid #F7F7F7', fontSize:13, fontWeight:600 }}>Resumo Mensal</div>
+            <div style={{ overflowX:'auto' }}>
+              <table style={{ width:'100%', borderCollapse:'collapse' }}>
+                <thead><tr>
+                  <TH ch="Mês"/>
+                  <TH ch="Custo Fixo" right/>
+                  <TH ch="Custo Variável" right/>
+                  <TH ch="Total" right/>
+                  <TH ch="Var. R$ MoM" right/>
+                  <TH ch="Var. % MoM" right/>
+                </tr></thead>
+                <tbody>
+                  {resumoMensal.map((r,i)=>(
+                    <tr key={i}>
+                      <td style={{ padding:'10px 14px', borderBottom:'1px solid #F7F7F7', fontWeight:600 }}>{r.mes}</td>
+                      <td style={{ padding:'10px 14px', borderBottom:'1px solid #F7F7F7', fontSize:13, fontVariantNumeric:'tabular-nums', color:'#888', textAlign:'right' }}>{fmt(r.fixo)}</td>
+                      <td style={{ padding:'10px 14px', borderBottom:'1px solid #F7F7F7', fontSize:13, fontVariantNumeric:'tabular-nums', color:'#888', textAlign:'right' }}>{fmt(r.variavel)}</td>
+                      <td style={{ padding:'10px 14px', borderBottom:'1px solid #F7F7F7', fontSize:13, fontVariantNumeric:'tabular-nums', fontWeight:700, textAlign:'right' }}>{fmt(r.total)}</td>
+                      <td style={{ padding:'10px 14px', borderBottom:'1px solid #F7F7F7', fontSize:13, fontVariantNumeric:'tabular-nums', fontWeight:600, color:r.varR>0?'#dc2626':'#16a34a', textAlign:'right' }}>
+                        {i===0?'—':`${r.varR>=0?'+':''}${fmt(r.varR)}`}
+                      </td>
+                      <td style={{ padding:'10px 14px', borderBottom:'1px solid #F7F7F7', textAlign:'right' }}>
+                        {i===0?<span style={{ color:'#BBB' }}>—</span>:<VarBadge pct={r.varPct}/>}
+                      </td>
+                    </tr>
                   ))}
-                </tr>
-              </thead>
-              <tbody>
-                {novosCustos.map((n, i) => (
-                  <tr key={i}>
-                    <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F0E8', fontWeight: 600 }}>{n.item}</td>
-                    <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F0E8', color: '#6A6A5A' }}>{n.loja}</td>
-                    <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F0E8', color: '#6A6A5A' }}>{n.mes}</td>
-                    <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F0E8', fontFamily: "'DM Mono', monospace", fontWeight: 600 }}>{fmt(n.valor)}</td>
-                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {/* ── 2. Por Loja ── */}
+        <div>
+          <SecaoTitle title="Por Loja" sub="Custo total (fixo + variável) por unidade ao longo do tempo"/>
+          <div style={{ border:'1px solid #F0F0F0', borderRadius:12, padding:'20px 24px 16px' }}>
+            <ResponsiveContainer width="100%" height={240}>
+              <LineChart data={dadosPorLoja} margin={{ top:4, right:4, left:0, bottom:0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" vertical={false}/>
+                <XAxis dataKey="mes" tick={{ fontSize:11, fill:'#BBB' }} axisLine={false} tickLine={false}/>
+                <YAxis tickFormatter={v=>`${(v/1000).toFixed(0)}k`} tick={{ fontSize:11, fill:'#BBB' }} axisLine={false} tickLine={false} width={48}/>
+                <Tooltip formatter={v=>fmt(v)} contentStyle={{ fontSize:12, border:'1px solid #F0F0F0', borderRadius:10 }}/>
+                <Legend iconSize={8} wrapperStyle={{ fontSize:11 }}/>
+                {lojas.map((loja,i)=>(
+                  <Line key={loja} type="monotone" dataKey={loja} stroke={CORES_LOJAS[i%CORES_LOJAS.length]} strokeWidth={2} dot={false} activeDot={{ r:4 }}/>
                 ))}
-              </tbody>
-            </table>
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* ── 3. Custo Fixo por Categoria ── */}
+        {dadosFixoCat.length > 0 && (
+          <div>
+            <SecaoTitle title="Custo Fixo por Categoria" sub="Evolução de cada categoria de custo fixo"/>
+            <div style={{ border:'1px solid #F0F0F0', borderRadius:12, padding:'20px 24px 16px' }}>
+              <ResponsiveContainer width="100%" height={220}>
+                <LineChart data={dadosFixoCat} margin={{ top:4, right:4, left:0, bottom:0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" vertical={false}/>
+                  <XAxis dataKey="mes" tick={{ fontSize:11, fill:'#BBB' }} axisLine={false} tickLine={false}/>
+                  <YAxis tickFormatter={v=>`${(v/1000).toFixed(0)}k`} tick={{ fontSize:11, fill:'#BBB' }} axisLine={false} tickLine={false} width={44}/>
+                  <Tooltip formatter={v=>fmt(v)} contentStyle={{ fontSize:12, border:'1px solid #F0F0F0', borderRadius:10 }}/>
+                  <Legend iconSize={8} wrapperStyle={{ fontSize:11 }}/>
+                  {catsFixo.map((cat,i)=>(
+                    <Line key={cat} type="monotone" dataKey={cat} stroke={CORES_CAT[i%CORES_CAT.length]} strokeWidth={2} dot={false} activeDot={{ r:4 }}/>
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
+
+        {/* ── 4. Custo Variável por Categoria ── */}
+        {dadosVarCat.length > 0 && (
+          <div>
+            <SecaoTitle title="Custo Variável por Categoria" sub="CMV, Comissões, Embalagens e Mão de obra"/>
+            <div style={{ border:'1px solid #F0F0F0', borderRadius:12, padding:'20px 24px 16px' }}>
+              <ResponsiveContainer width="100%" height={220}>
+                <LineChart data={dadosVarCat} margin={{ top:4, right:4, left:0, bottom:0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" vertical={false}/>
+                  <XAxis dataKey="mes" tick={{ fontSize:11, fill:'#BBB' }} axisLine={false} tickLine={false}/>
+                  <YAxis tickFormatter={v=>`${(v/1000).toFixed(0)}k`} tick={{ fontSize:11, fill:'#BBB' }} axisLine={false} tickLine={false} width={44}/>
+                  <Tooltip formatter={v=>fmt(v)} contentStyle={{ fontSize:12, border:'1px solid #F0F0F0', borderRadius:10 }}/>
+                  <Legend iconSize={8} wrapperStyle={{ fontSize:11 }}/>
+                  {catsVar.map((cat,i)=>(
+                    <Line key={cat} type="monotone" dataKey={cat} stroke={CORES_CAT[i%CORES_CAT.length]} strokeWidth={2} dot={false} activeDot={{ r:4 }}/>
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
+
+        {/* ── 5. Ranking de crescimento ── */}
+        {ranking.length > 0 && (
+          <div>
+            <SecaoTitle title="Ranking de Variação" sub={`Categorias que mais variaram — comparativo último mês disponível`}/>
+            <div style={{ border:'1px solid #F0F0F0', borderRadius:12, overflow:'hidden' }}>
+              <div style={{ overflowX:'auto' }}>
+                <table style={{ width:'100%', borderCollapse:'collapse' }}>
+                  <thead><tr>
+                    <TH ch="#"/>
+                    <TH ch="Categoria"/>
+                    <TH ch="Mês Anterior" right/>
+                    <TH ch="Mês Atual" right/>
+                    <TH ch="Var. R$" right/>
+                    <TH ch="Var. %" right/>
+                  </tr></thead>
+                  <tbody>
+                    {ranking.map((r,i)=>(
+                      <tr key={i}>
+                        <td style={{ padding:'10px 14px', borderBottom:'1px solid #F7F7F7', fontSize:12, color:'#BBB', fontWeight:600, width:40 }}>{i+1}</td>
+                        <td style={{ padding:'10px 14px', borderBottom:'1px solid #F7F7F7', fontSize:13, fontWeight:500 }}>{r.categoria}</td>
+                        <td style={{ padding:'10px 14px', borderBottom:'1px solid #F7F7F7', fontSize:13, fontVariantNumeric:'tabular-nums', color:'#888', textAlign:'right' }}>{fmt(r.anterior)}</td>
+                        <td style={{ padding:'10px 14px', borderBottom:'1px solid #F7F7F7', fontSize:13, fontVariantNumeric:'tabular-nums', fontWeight:600, textAlign:'right' }}>{fmt(r.atual)}</td>
+                        <td style={{ padding:'10px 14px', borderBottom:'1px solid #F7F7F7', fontSize:13, fontVariantNumeric:'tabular-nums', fontWeight:600, color:r.difR>0?'#dc2626':'#16a34a', textAlign:'right' }}>{r.difR>=0?'+':''}{fmt(r.difR)}</td>
+                        <td style={{ padding:'10px 14px', borderBottom:'1px solid #F7F7F7', textAlign:'right' }}><VarBadge pct={r.difPct}/></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         )}
 
