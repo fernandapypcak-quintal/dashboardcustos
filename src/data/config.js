@@ -5,6 +5,7 @@
 
 export const APPS_SCRIPT_URL =
   'https://script.google.com/macros/s/AKfycbxVXc8MXLItuTmgRP8v2dlQj4UNyQSEHfX-snfAPfL5JBgrjhNIOsb4DikFrDm7H8OX/exec'
+
 export const LOJAS = [
   'Todas',
   'Holding',

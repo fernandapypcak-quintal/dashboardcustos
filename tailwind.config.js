@@ -4,16 +4,16 @@ export default {
   theme: {
     extend: {
       colors: {
-        verde: '#97A624',
-        vermelho: '#8C1414',
-        ambar: '#D9B504',
-        preto: '#0D0D0D',
-        offwhite: '#FAFAF8',
-        borda: '#E8E8E2',
+        verde:    '#5C7A00',
+        vermelho: '#C0392B',
+        ambar:    '#D4A017',
+        preto:    '#111111',
+        offwhite: '#F7F7F5',
+        borda:    '#EBEBEB',
       },
       fontFamily: {
-        sans: ['DM Sans', 'sans-serif'],
-        mono: ['DM Mono', 'monospace'],
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace'],
       },
     },
   },

@@ -1,29 +1,15 @@
 import React from 'react'
+const MONO = { fontFamily: "'JetBrains Mono', monospace" }
 
 export default function KpiCard({ label, valor, subtitulo, subtituloColor, icon: Icon }) {
   return (
-    <div style={{
-      background: '#fff',
-      border: '1px solid #E8E8E2',
-      borderRadius: 8,
-      padding: '18px 20px 16px',
-      display: 'flex', flexDirection: 'column', gap: 6,
-      minWidth: 0,
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <span style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#8A8A7A' }}>
-          {label}
-        </span>
-        {Icon && <Icon size={14} color="#C0C0B0" />}
+    <div style={{ background: '#fff', border: '1px solid #EBEBEB', borderRadius: 10, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: 10.5, fontWeight: 500, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#999' }}>{label}</span>
+        {Icon && <Icon size={13} color="#DDD" />}
       </div>
-      <div style={{ fontSize: 26, fontWeight: 700, color: '#0D0D0D', fontFamily: "'DM Mono', monospace", lineHeight: 1.15 }}>
-        {valor}
-      </div>
-      {subtitulo && (
-        <div style={{ fontSize: 12, fontWeight: 500, color: subtituloColor || '#8A8A7A' }}>
-          {subtitulo}
-        </div>
-      )}
+      <div style={{ ...MONO, fontSize: 24, fontWeight: 600, color: '#111' }}>{valor}</div>
+      {subtitulo && <div style={{ fontSize: 12, color: subtituloColor || '#999' }}>{subtitulo}</div>}
     </div>
   )
 }
