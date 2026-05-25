@@ -1,21 +1,14 @@
 import React from 'react'
-
 const MAP = {
-  pago:     { label: 'Pago',     bg: '#F0F7E6', color: '#3D6B00' },
-  pendente: { label: 'Pendente', bg: '#FDF8E6', color: '#8A6500' },
-  vencido:  { label: 'Vencido',  bg: '#FDECEA', color: '#C0392B' },
+  pago:     { label:'Pago',     bg:'#F0FDF4', color:'#16a34a' },
+  pendente: { label:'Pendente', bg:'#FFFBEB', color:'#d97706' },
+  vencido:  { label:'Vencido',  bg:'#FEF2F2', color:'#dc2626' },
 }
-
 export default function StatusBadge({ status }) {
   const s = MAP[status] || MAP.pendente
   return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 5,
-      padding: '3px 8px', borderRadius: 20,
-      fontSize: 11, fontWeight: 500,
-      background: s.bg, color: s.color,
-    }}>
-      <span style={{ width: 5, height: 5, borderRadius: '50%', background: s.color }} />
+    <span style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'3px 9px', borderRadius:99, fontSize:11.5, fontWeight:500, background:s.bg, color:s.color }}>
+      <span style={{ width:5, height:5, borderRadius:'50%', background:s.color }}/>
       {s.label}
     </span>
   )

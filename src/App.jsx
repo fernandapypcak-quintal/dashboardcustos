@@ -48,7 +48,7 @@ function AppInner() {
   const { loading, error } = useFinanceiro()
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#FAFAF8' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#fff' }}>
       <Sidebar page={page} setPage={setPage} />
       <main style={{ flex: 1, minWidth: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
         {loading ? <LoadingScreen /> : error ? <ErrorScreen error={error} /> : (PAGES[page] || PAGES.home)}

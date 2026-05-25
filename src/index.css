@@ -6,42 +6,33 @@
 
 html, body {
   font-family: 'Inter', system-ui, sans-serif;
-  background: #F7F7F5;
-  color: #111111;
+  background: #fff;
+  color: #1a1a1a;
   margin: 0; padding: 0;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
   font-size: 14px;
+  line-height: 1.5;
 }
 
 button, input, select, textarea, th, td, label, span, div, p, h1, h2, h3 {
   font-family: inherit;
 }
 
-.font-mono, .mono {
-  font-family: 'JetBrains Mono', monospace !important;
-  font-feature-settings: 'tnum';
-}
+.mono { font-family: 'Inter', system-ui, sans-serif; font-variant-numeric: tabular-nums; }
 
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #DDDDD8; border-radius: 2px; }
+::-webkit-scrollbar-thumb { background: #E8E8E8; border-radius: 2px; }
 
-/* Painel lateral */
 .painel-overlay {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.2);
-  z-index: 40;
-  animation: fadeIn 0.15s ease;
+  position: fixed; inset: 0; background: rgba(0,0,0,0.15);
+  z-index: 40; animation: fadeIn 0.15s ease;
 }
 .painel-lateral {
-  position: fixed; top: 0; right: 0; bottom: 0;
-  width: 400px;
-  background: #fff;
-  border-left: 1px solid #EBEBEB;
-  z-index: 50;
-  overflow-y: auto;
+  position: fixed; top: 0; right: 0; bottom: 0; width: 400px;
+  background: #fff; border-left: 1px solid #F0F0F0;
+  z-index: 50; overflow-y: auto;
   animation: slideIn 0.2s cubic-bezier(0.16,1,0.3,1);
 }
-@keyframes fadeIn  { from { opacity: 0 } to { opacity: 1 } }
-@keyframes slideIn { from { transform: translateX(100%) } to { transform: translateX(0) } }
+@keyframes fadeIn  { from { opacity:0 } to { opacity:1 } }
+@keyframes slideIn { from { transform:translateX(100%) } to { transform:translateX(0) } }
