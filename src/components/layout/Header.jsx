@@ -1,49 +1,78 @@
 import React from 'react'
 import { useFinanceiro } from '../../hooks/useFinanceiro.jsx'
 import { LOJAS } from '../../data/config.js'
+import { ChevronDown, X } from 'lucide-react'
 
 export default function Header({ title, subtitle }) {
   const { lojaFiltro, setLojaFiltro, mesFiltro, setMesFiltro, mesesDisponiveis } = useFinanceiro()
 
-  const pill = (ativo) => ({
-    padding: '5px 14px', borderRadius: 20,
-    border: `1px solid ${ativo ? '#1a1a1a' : '#E8E8E8'}`,
-    fontSize: 13, fontWeight: ativo ? 500 : 400,
-    cursor: 'pointer', outline: 'none',
-    background: ativo ? '#1a1a1a' : '#fff',
-    color:      ativo ? '#fff'    : '#555',
-    transition: 'all 0.1s',
-    appearance: 'none', WebkitAppearance: 'none',
-    paddingRight: 28,
-    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='${ativo ? '%23fff' : '%23999'}'/%3E%3C/svg%3E")`,
-    backgroundRepeat: 'no-repeat',
-    backgroundPosition: 'right 10px center',
-  })
+  const mesLabel = mesesDisponiveis.find(m => m.value === mesFiltro)?.label || ''
 
   return (
     <header style={{
-      background: '#fff', borderBottom: '1px solid #F0F0F0',
-      padding: '14px 28px',
-      display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
-      gap: 16,
+      background:'#fff', borderBottom:'1px solid #F0F0F0',
+      padding:'16px 28px',
+      display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:20,
+      position:'sticky', top:0, zIndex:20,
     }}>
+      {/* Título */}
       <div>
-        <h1 style={{ fontSize: 18, fontWeight: 600, color: '#1a1a1a', margin: 0, lineHeight: 1.2 }}>{title}</h1>
-        {subtitle && <div style={{ fontSize: 12, color: '#999', marginTop: 2 }}>{subtitle}</div>}
+        <h1 style={{ fontSize:20, fontWeight:700, color:'#1a1a1a', margin:0, lineHeight:1.2 }}>{title}</h1>
+        {subtitle && <div style={{ fontSize:12, color:'#999', marginTop:3 }}>{subtitle}</div>}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, marginTop: 2 }}>
+      {/* Filtros */}
+      <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0, marginTop:2 }}>
+
+        {/* Mês — pill escuro quando ativo, com X para limpar */}
         {mesesDisponiveis.length > 0 && (
-          <select value={mesFiltro} onChange={e => setMesFiltro(e.target.value)} style={pill(!!mesFiltro)}>
-            <option value="">Todos os meses</option>
-            {mesesDisponiveis.map(({ value, label }) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </select>
+          mesFiltro ? (
+            <div style={{ display:'flex', alignItems:'center', gap:0, background:'#1a1a1a', borderRadius:99, padding:'0 4px 0 14px', height:34 }}>
+              <span style={{ fontSize:13, fontWeight:500, color:'#fff', lineHeight:1 }}>{mesLabel}</span>
+              <button onClick={() => setMesFiltro('')} style={{ border:'none', background:'none', cursor:'pointer', padding:'4px 6px', color:'#aaa', display:'flex', alignItems:'center' }}>
+                <X size={12} color="#fff" strokeWidth={2.5}/>
+              </button>
+            </div>
+          ) : (
+            <div style={{ position:'relative' }}>
+              <select
+                value=""
+                onChange={e => setMesFiltro(e.target.value)}
+                style={{
+                  appearance:'none', WebkitAppearance:'none',
+                  padding:'0 32px 0 14px', height:34, border:'1px solid #E8E8E8',
+                  borderRadius:99, fontSize:13, color:'#555', background:'#fff',
+                  cursor:'pointer', outline:'none', fontFamily:'inherit',
+                }}
+              >
+                <option value="">Todos os meses</option>
+                {mesesDisponiveis.map(({value,label}) => <option key={value} value={value}>{label}</option>)}
+              </select>
+              <ChevronDown size={13} color="#999" style={{ position:'absolute', right:11, top:'50%', transform:'translateY(-50%)', pointerEvents:'none' }}/>
+            </div>
+          )
         )}
-        <select value={lojaFiltro} onChange={e => setLojaFiltro(e.target.value)} style={pill(lojaFiltro !== 'Todas')}>
-          {LOJAS.map(l => <option key={l} value={l}>{l === 'Todas' ? 'Todas as lojas' : l}</option>)}
-        </select>
+
+        {/* Loja */}
+        <div style={{ position:'relative' }}>
+          <select
+            value={lojaFiltro}
+            onChange={e => setLojaFiltro(e.target.value)}
+            style={{
+              appearance:'none', WebkitAppearance:'none',
+              padding:'0 32px 0 14px', height:34,
+              border: lojaFiltro !== 'Todas' ? '1px solid #1a1a1a' : '1px solid #E8E8E8',
+              borderRadius:99, fontSize:13,
+              color: lojaFiltro !== 'Todas' ? '#1a1a1a' : '#555',
+              background:'#fff', cursor:'pointer', outline:'none', fontFamily:'inherit',
+              fontWeight: lojaFiltro !== 'Todas' ? 600 : 400,
+            }}
+          >
+            {LOJAS.map(l => <option key={l} value={l}>{l === 'Todas' ? 'Todas as lojas' : l}</option>)}
+          </select>
+          <ChevronDown size={13} color="#999" style={{ position:'absolute', right:11, top:'50%', transform:'translateY(-50%)', pointerEvents:'none' }}/>
+        </div>
+
       </div>
     </header>
   )
