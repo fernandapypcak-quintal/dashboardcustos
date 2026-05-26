@@ -6,96 +6,126 @@ import { fmt, fmtPct } from '../../utils.js'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LineChart, Line, Legend } from 'recharts'
 
 const CORES = ['#1a1a1a','#22c55e','#f59e0b','#3b82f6','#ef4444','#8b5cf6','#ec4899','#14b8a6']
+const ORDEM = ['Jan/24','Fev/24','Mar/24','Abr/24','Mai/24','Jun/24','Jul/24','Ago/24','Set/24','Out/24','Nov/24','Dez/24',
+               'Jan/25','Fev/25','Mar/25','Abr/25','Mai/25','Jun/25','Jul/25','Ago/25','Set/25','Out/25','Nov/25','Dez/25',
+               'Jan/26','Fev/26','Mar/26','Abr/26','Mai/26','Jun/26','Jul/26','Ago/26','Set/26','Out/26','Nov/26','Dez/26']
 
 const TH = ({ ch, right }) => (
-  <th style={{ fontSize:10, fontWeight:600, letterSpacing:'0.06em', textTransform:'uppercase', color:'#fff', background:'#1a1a1a', padding:'10px 14px', textAlign: right?'right':'left', whiteSpace:'nowrap' }}>{ch}</th>
+  <th style={{ fontSize:10, fontWeight:600, letterSpacing:'0.06em', textTransform:'uppercase', color:'#fff', background:'#1a1a1a', padding:'10px 14px', textAlign:right?'right':'left', whiteSpace:'nowrap' }}>{ch}</th>
 )
 const TD = ({ ch, mono, muted, right, color }) => (
-  <td style={{ padding:'10px 14px', fontSize:13, borderBottom:'1px solid #F7F7F7', color: color||(muted?'#888':'#1a1a1a'), fontVariantNumeric: mono?'tabular-nums':undefined, textAlign: right?'right':'left' }}>{ch}</td>
+  <td style={{ padding:'10px 14px', fontSize:13, borderBottom:'1px solid #F7F7F7', color:color||(muted?'#888':'#1a1a1a'), fontVariantNumeric:mono?'tabular-nums':undefined, textAlign:right?'right':'left' }}>{ch}</td>
 )
-
 function VarBadge({ pct }) {
   const color = pct>10?'#dc2626':pct>0?'#d97706':'#16a34a'
   const bg    = pct>10?'#FEF2F2':pct>0?'#FFFBEB':'#F0FDF4'
   return <span style={{ display:'inline-block', padding:'2px 8px', borderRadius:99, fontSize:11, fontWeight:600, fontVariantNumeric:'tabular-nums', background:bg, color }}>{fmtPct(pct)}</span>
 }
-
 function TabBtn({ label, ativo, onClick }) {
-  return (
-    <button onClick={onClick} style={{ padding:'6px 16px', borderRadius:8, border: ativo?'none':'1px solid #E8E8E8', background: ativo?'#1a1a1a':'#fff', color: ativo?'#fff':'#666', fontSize:13, fontWeight: ativo?600:400, cursor:'pointer', fontFamily:'inherit' }}>
-      {label}
-    </button>
-  )
+  return <button onClick={onClick} style={{ padding:'6px 16px', borderRadius:8, border:ativo?'none':'1px solid #E8E8E8', background:ativo?'#1a1a1a':'#fff', color:ativo?'#fff':'#666', fontSize:13, fontWeight:ativo?600:400, cursor:'pointer', fontFamily:'inherit' }}>{label}</button>
 }
 
 export default function CustoFixo() {
-  const { custosFiltrados, historicoCatFixoFiltrado, custosFixos, lojaFiltro } = useFinanceiro()
-  const [topMode,   setTopMode]   = useState('todos')   // todos | top20 | bot20
-  const [lojaMode,  setLojaMode]  = useState('geral')   // geral | porloja
+  const { custosFiltrados, historicoCatFixoFiltrado, historicoFiltrado, lojaFiltro } = useFinanceiro()
+  const [topMode,  setTopMode]  = useState('todos')
+  const [lojaMode, setLojaMode] = useState('geral')
 
   const { meses, categorias, dadosGrafico, tabelaHistorica, ranking } = useVariacaoMensal(historicoCatFixoFiltrado)
 
-  const totalOrcado    = custosFiltrados.reduce((s,c)=>s+c.orcado,0)
-  const totalRealizado = custosFiltrados.reduce((s,c)=>s+c.realizado,0)
-  const varTotal = totalOrcado>0?((totalRealizado-totalOrcado)/totalOrcado)*100:0
-
-  // Agrupado por categoria (geral)
-  const porCategoria = useMemo(()=>{
-    const map={}
-    custosFiltrados.forEach(({categoria,orcado,realizado})=>{
-      if(!map[categoria]) map[categoria]={categoria,orcado:0,realizado:0}
-      map[categoria].orcado+=orcado; map[categoria].realizado+=realizado
+  // Total do mês atual e anterior (do histórico)
+  const { totalMes, totalAnterior, varR, varPct, mesAtual, mesAnterior } = useMemo(() => {
+    const map = {}
+    historicoFiltrado.forEach(({ mes, total_realizado }) => {
+      if (!map[mes]) map[mes] = 0
+      map[mes] += total_realizado
     })
-    return Object.values(map).map(r=>({...r,variacao:r.orcado>0?((r.realizado-r.orcado)/r.orcado)*100:0})).sort((a,b)=>b.realizado-a.realizado)
-  },[custosFiltrados])
+    const sorted = Object.keys(map).sort((a,b) => (ORDEM.indexOf(a)<0?999:ORDEM.indexOf(a)) - (ORDEM.indexOf(b)<0?999:ORDEM.indexOf(b)))
+    const ult  = sorted[sorted.length-1]
+    const prev = sorted[sorted.length-2]
+    const t = map[ult]||0, p = map[prev]||0
+    return { totalMes:t, totalAnterior:p, varR:t-p, varPct:p>0?((t-p)/p)*100:0, mesAtual:ult||'', mesAnterior:prev||'' }
+  }, [historicoFiltrado])
 
-  // Por loja
-  const porLoja = useMemo(()=>{
-    const map={}
-    custosFiltrados.forEach(({loja,orcado,realizado})=>{
-      if(!map[loja]) map[loja]={loja,orcado:0,realizado:0}
-      map[loja].orcado+=orcado; map[loja].realizado+=realizado
+  // Por categoria — realizado mês atual vs anterior
+  const porCategoria = useMemo(() => {
+    const mesesSorted = [...new Set(historicoCatFixoFiltrado.map(h=>h.mes))].sort((a,b)=>(ORDEM.indexOf(a)<0?999:ORDEM.indexOf(a))-(ORDEM.indexOf(b)<0?999:ORDEM.indexOf(b)))
+    const ult = mesesSorted[mesesSorted.length-1]
+    const prev = mesesSorted[mesesSorted.length-2]
+    const cats = [...new Set(historicoCatFixoFiltrado.map(h=>h.categoria))]
+    return cats.map(cat => {
+      const atual    = historicoCatFixoFiltrado.filter(h=>h.mes===ult&&h.categoria===cat).reduce((s,h)=>s+h.realizado,0)
+      const anterior = historicoCatFixoFiltrado.filter(h=>h.mes===prev&&h.categoria===cat).reduce((s,h)=>s+h.realizado,0)
+      const difR   = atual - anterior
+      const difPct = anterior>0 ? (difR/anterior)*100 : 0
+      return { categoria:cat, atual, anterior, difR, difPct }
+    }).sort((a,b)=>b.atual-a.atual)
+  }, [historicoCatFixoFiltrado])
+
+  // Por loja — realizado mês atual
+  const porLoja = useMemo(() => {
+    const mesesSorted = [...new Set(historicoFiltrado.map(h=>h.mes))].sort((a,b)=>(ORDEM.indexOf(a)<0?999:ORDEM.indexOf(a))-(ORDEM.indexOf(b)<0?999:ORDEM.indexOf(b)))
+    const ult  = mesesSorted[mesesSorted.length-1]
+    const prev = mesesSorted[mesesSorted.length-2]
+    const lojas = [...new Set(historicoFiltrado.map(h=>h.loja))]
+    return lojas.map(loja => {
+      const atual    = historicoFiltrado.filter(h=>h.mes===ult&&h.loja===loja).reduce((s,h)=>s+h.total_realizado,0)
+      const anterior = historicoFiltrado.filter(h=>h.mes===prev&&h.loja===loja).reduce((s,h)=>s+h.total_realizado,0)
+      const difPct = anterior>0 ? ((atual-anterior)/anterior)*100 : 0
+      return { loja, atual, anterior, difPct }
+    }).sort((a,b)=>b.atual-a.atual)
+  }, [historicoFiltrado])
+
+  // Itens individuais com MoM
+  const porItem = useMemo(() => {
+    const mesesSorted = [...new Set(historicoCatFixoFiltrado.map(h=>h.mes))].sort((a,b)=>(ORDEM.indexOf(a)<0?999:ORDEM.indexOf(a))-(ORDEM.indexOf(b)<0?999:ORDEM.indexOf(b)))
+    const ult  = mesesSorted[mesesSorted.length-1]
+    const prev = mesesSorted[mesesSorted.length-2]
+    // Agrupa por categoria+loja
+    const map = {}
+    historicoCatFixoFiltrado.forEach(({ mes, loja, categoria, realizado }) => {
+      const k = `${categoria}||${loja}`
+      if (!map[k]) map[k] = { categoria, loja, atual:0, anterior:0 }
+      if (mes === ult)  map[k].atual    += realizado
+      if (mes === prev) map[k].anterior += realizado
     })
-    return Object.values(map).map(r=>({...r,variacao:r.orcado>0?((r.realizado-r.orcado)/r.orcado)*100:0}))
-  },[custosFiltrados])
+    return Object.values(map).map(r => ({
+      ...r,
+      difR:   r.atual - r.anterior,
+      difPct: r.anterior>0 ? ((r.atual-r.anterior)/r.anterior)*100 : 0,
+    }))
+  }, [historicoCatFixoFiltrado])
 
-  // Itens individuais
-  const porItem = useMemo(()=>custosFiltrados.map(c=>({...c,variacao:c.orcado>0?((c.realizado-c.orcado)/c.orcado)*100:0})),[custosFiltrados])
+  const baseItens = lojaMode==='geral'
+    ? porCategoria.map(r => ({ ...r, loja:'— todas —' }))
+    : porItem
 
-  // Agrupado por categoria+loja para o modo "por loja"
-  const porCatLoja = useMemo(()=>{
-    const map={}
-    custosFiltrados.forEach(({categoria,loja,orcado,realizado})=>{
-      const k=`${categoria}||${loja}`
-      if(!map[k]) map[k]={categoria,loja,orcado:0,realizado:0}
-      map[k].orcado+=orcado; map[k].realizado+=realizado
-    })
-    return Object.values(map).map(r=>({...r,variacao:r.orcado>0?((r.realizado-r.orcado)/r.orcado)*100:0})).sort((a,b)=>b.realizado-a.realizado)
-  },[custosFiltrados])
-
-  const baseItens = lojaMode==='geral' ? porCatLoja.map(r=>({...r,subcategoria:r.categoria})) : porItem
-  const dadosExibidos = useMemo(()=>{
-    const sorted=[...baseItens].sort((a,b)=>b.realizado-a.realizado)
-    if(topMode==='top20') return sorted.slice(0,20)
-    if(topMode==='bot20') return [...sorted].reverse().slice(0,20)
+  const dadosExibidos = useMemo(() => {
+    const sorted = [...baseItens].sort((a,b)=>b.atual-a.atual)
+    if (topMode==='top20') return sorted.slice(0,20)
+    if (topMode==='bot20') return [...sorted].reverse().slice(0,20)
     return sorted
-  },[baseItens,topMode])
+  }, [baseItens, topMode])
+
+  const totalExibido = dadosExibidos.reduce((s,c)=>s+c.atual,0)
 
   return (
     <div style={{ background:'#fff', minHeight:'100vh' }}>
       <Header title="Custo Fixo"/>
       <div style={{ padding:'24px 28px', display:'flex', flexDirection:'column', gap:20 }}>
 
-        {/* KPIs */}
+        {/* KPIs mês a mês */}
         <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:14 }}>
           {[
-            { label:'Total Orçado',    valor:fmt(totalOrcado),    color:'#888' },
-            { label:'Total Realizado', valor:fmt(totalRealizado), color:'#1a1a1a' },
-            { label:'Variação vs Orçamento', valor:fmtPct(varTotal), color:varTotal>5?'#dc2626':varTotal>0?'#d97706':'#16a34a' },
-          ].map(({label,valor,color})=>(
+            { label:`Realizado — ${mesAtual||'mês atual'}`, valor:fmt(totalMes), color:'#1a1a1a', sub:null },
+            { label:`Mês Anterior — ${mesAnterior||''}`,    valor:fmt(totalAnterior), color:'#888', sub:null },
+            { label:'Variação Mês a Mês', valor:fmtPct(varPct),
+              color:varPct>5?'#dc2626':varPct>0?'#d97706':'#16a34a',
+              sub:`${varR>=0?'+':''}${fmt(varR)}` },
+          ].map(({label,valor,color,sub})=>(
             <div key={label} style={{ border:'1px solid #F0F0F0', borderRadius:12, padding:'18px 20px' }}>
               <div style={{ fontSize:11, fontWeight:500, letterSpacing:'0.05em', textTransform:'uppercase', color:'#999', marginBottom:8 }}>{label}</div>
               <div style={{ fontSize:28, fontWeight:700, color, fontVariantNumeric:'tabular-nums' }}>{valor}</div>
+              {sub && <div style={{ fontSize:12, fontWeight:500, color, marginTop:6 }}>{sub}</div>}
             </div>
           ))}
         </div>
@@ -103,7 +133,10 @@ export default function CustoFixo() {
         {/* Ranking MoM */}
         {(ranking.maioresAltas.length>0||ranking.maioresBaixas.length>0) && (
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
-            {[{titulo:'Maiores Altas — mês a mês', dados:ranking.maioresAltas, up:true},{titulo:'Maiores Quedas — mês a mês', dados:ranking.maioresBaixas, up:false}].map(({titulo,dados,up})=>(
+            {[
+              { titulo:'Maiores Altas — mês a mês', dados:ranking.maioresAltas,  up:true  },
+              { titulo:'Maiores Quedas — mês a mês', dados:ranking.maioresBaixas, up:false },
+            ].map(({titulo,dados,up})=>(
               <div key={titulo} style={{ border:'1px solid #F0F0F0', borderRadius:12, overflow:'hidden' }}>
                 <div style={{ padding:'14px 18px', borderBottom:'1px solid #F7F7F7', fontSize:11, fontWeight:600, letterSpacing:'0.05em', textTransform:'uppercase', color:'#999' }}>{titulo}</div>
                 {dados.length===0
@@ -112,7 +145,7 @@ export default function CustoFixo() {
                     <div key={i} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 18px', borderBottom:'1px solid #F7F7F7' }}>
                       <span style={{ fontSize:13 }}>{r.categoria}</span>
                       <div style={{ display:'flex', gap:10, alignItems:'center' }}>
-                        <span style={{ fontSize:12, fontVariantNumeric:'tabular-nums', fontWeight:600, color: up?'#dc2626':'#16a34a' }}>{up?'+':''}{fmt(r.variacaoR)}</span>
+                        <span style={{ fontSize:12, fontVariantNumeric:'tabular-nums', fontWeight:600, color:up?'#dc2626':'#16a34a' }}>{up?'+':''}{fmt(r.variacaoR)}</span>
                         <VarBadge pct={r.variacaoPct}/>
                       </div>
                     </div>
@@ -126,7 +159,7 @@ export default function CustoFixo() {
         {/* Gráfico histórico por categoria */}
         {dadosGrafico.length>0 && (
           <div style={{ border:'1px solid #F0F0F0', borderRadius:12, padding:'20px 24px 16px' }}>
-            <div style={{ fontSize:13, fontWeight:600, marginBottom:4 }}>Evolução Histórica por Categoria</div>
+            <div style={{ fontSize:13, fontWeight:600, marginBottom:4 }}>Evolução por Categoria</div>
             <div style={{ fontSize:12, color:'#999', marginBottom:18 }}>Custo realizado mês a mês</div>
             <ResponsiveContainer width="100%" height={220}>
               <LineChart data={dadosGrafico} margin={{ top:4, right:4, left:0, bottom:0 }}>
@@ -148,14 +181,14 @@ export default function CustoFixo() {
           <div style={{ border:'1px solid #F0F0F0', borderRadius:12, overflow:'hidden' }}>
             <div style={{ padding:'14px 20px', borderBottom:'1px solid #F7F7F7' }}>
               <div style={{ fontSize:13, fontWeight:600 }}>Histórico por Categoria</div>
-              <div style={{ fontSize:12, color:'#999', marginTop:2 }}>Valores realizados — variação em destaque</div>
+              <div style={{ fontSize:12, color:'#999', marginTop:2 }}>Vermelho = subiu · Verde = caiu vs mês anterior</div>
             </div>
             <div style={{ overflowX:'auto' }}>
               <table style={{ width:'100%', borderCollapse:'collapse' }}>
                 <thead><tr>
                   <TH ch="Categoria"/>
                   {meses.map(m=><TH key={m} ch={m}/>)}
-                  <TH ch="Var. R$ (MoM)" right/>
+                  <TH ch="Var. R$" right/>
                   <TH ch="Var. %" right/>
                 </tr></thead>
                 <tbody>
@@ -165,9 +198,9 @@ export default function CustoFixo() {
                       {meses.map((m,mi)=>{
                         const val=row[m]||0, prev=mi>0?(row[meses[mi-1]]||0):null
                         const changed=prev!==null&&val!==prev
-                        return <td key={m} style={{ padding:'10px 14px', borderBottom:'1px solid #F7F7F7', fontSize:12, fontVariantNumeric:'tabular-nums', color: changed?(val>prev?'#dc2626':'#16a34a'):'#1a1a1a', fontWeight: changed?600:400 }}>{val>0?fmt(val):'—'}</td>
+                        return <td key={m} style={{ padding:'10px 14px', borderBottom:'1px solid #F7F7F7', fontSize:12, fontVariantNumeric:'tabular-nums', color:changed?(val>prev?'#dc2626':'#16a34a'):'#1a1a1a', fontWeight:changed?600:400 }}>{val>0?fmt(val):'—'}</td>
                       })}
-                      <td style={{ padding:'10px 14px', borderBottom:'1px solid #F7F7F7', fontSize:12, fontVariantNumeric:'tabular-nums', fontWeight:600, color: row.variacaoR>0?'#dc2626':'#16a34a', textAlign:'right' }}>{row.variacaoR>=0?'+':''}{fmt(row.variacaoR)}</td>
+                      <td style={{ padding:'10px 14px', borderBottom:'1px solid #F7F7F7', fontSize:12, fontVariantNumeric:'tabular-nums', fontWeight:600, color:row.variacaoR>0?'#dc2626':'#16a34a', textAlign:'right' }}>{row.variacaoR>=0?'+':''}{fmt(row.variacaoR)}</td>
                       <td style={{ padding:'10px 14px', borderBottom:'1px solid #F7F7F7', textAlign:'right' }}><VarBadge pct={row.variacaoPct}/></td>
                     </tr>
                   ))}
@@ -177,22 +210,29 @@ export default function CustoFixo() {
           </div>
         )}
 
-        {/* Por loja (quando Todas) */}
-        {lojaFiltro==='Todas' && (
+        {/* Por loja */}
+        {lojaFiltro==='Todas' && porLoja.length>0 && (
           <div style={{ border:'1px solid #F0F0F0', borderRadius:12, overflow:'hidden' }}>
             <div style={{ padding:'14px 20px', borderBottom:'1px solid #F7F7F7' }}>
-              <div style={{ fontSize:13, fontWeight:600 }}>Custo por Loja — mês atual</div>
+              <div style={{ fontSize:13, fontWeight:600 }}>Por Loja — {mesAtual}</div>
+              <div style={{ fontSize:12, color:'#999', marginTop:2 }}>Comparativo com {mesAnterior}</div>
             </div>
             <table style={{ width:'100%', borderCollapse:'collapse' }}>
-              <thead><tr><TH ch="Loja"/><TH ch="Orçado" right/><TH ch="Realizado" right/><TH ch="Variação" right/><TH ch="% do Total" right/></tr></thead>
+              <thead><tr>
+                <TH ch="Loja"/>
+                <TH ch={mesAnterior||'Anterior'} right/>
+                <TH ch={mesAtual||'Atual'} right/>
+                <TH ch="Var. R$" right/>
+                <TH ch="Var. %" right/>
+              </tr></thead>
               <tbody>
                 {porLoja.map((l,i)=>(
                   <tr key={i}>
                     <TD ch={l.loja}/>
-                    <TD ch={fmt(l.orcado)} mono muted right/>
-                    <TD ch={fmt(l.realizado)} mono right/>
-                    <td style={{ padding:'10px 14px', borderBottom:'1px solid #F7F7F7', textAlign:'right' }}><VarBadge pct={l.variacao}/></td>
-                    <TD ch={totalRealizado>0?((l.realizado/totalRealizado)*100).toFixed(1)+'%':'-'} mono muted right/>
+                    <TD ch={fmt(l.anterior)} mono muted right/>
+                    <TD ch={fmt(l.atual)} mono right/>
+                    <td style={{ padding:'10px 14px', borderBottom:'1px solid #F7F7F7', fontSize:13, fontVariantNumeric:'tabular-nums', fontWeight:600, color:l.atual-l.anterior>0?'#dc2626':'#16a34a', textAlign:'right' }}>{l.atual-l.anterior>=0?'+':''}{fmt(l.atual-l.anterior)}</td>
+                    <td style={{ padding:'10px 14px', borderBottom:'1px solid #F7F7F7', textAlign:'right' }}><VarBadge pct={l.difPct}/></td>
                   </tr>
                 ))}
               </tbody>
@@ -200,33 +240,35 @@ export default function CustoFixo() {
           </div>
         )}
 
-        {/* Gráfico orçado vs realizado */}
-        <div style={{ border:'1px solid #F0F0F0', borderRadius:12, padding:'20px 24px 16px' }}>
-          <div style={{ fontSize:13, fontWeight:600, marginBottom:18 }}>Orçado vs Realizado — mês atual</div>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={porCategoria} margin={{ top:4, right:4, left:0, bottom:0 }} barCategoryGap="30%">
-              <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" vertical={false}/>
-              <XAxis dataKey="categoria" tick={{ fontSize:11, fill:'#BBB' }} axisLine={false} tickLine={false}/>
-              <YAxis tickFormatter={v=>`${(v/1000).toFixed(0)}k`} tick={{ fontSize:11, fill:'#BBB' }} axisLine={false} tickLine={false} width={44}/>
-              <Tooltip formatter={(v,n)=>[fmt(v),n==='orcado'?'Orçado':'Realizado']} contentStyle={{ fontSize:12, border:'1px solid #F0F0F0', borderRadius:10 }}/>
-              <Bar dataKey="orcado" name="orcado" fill="#F0F0F0" radius={[4,4,0,0]}/>
-              <Bar dataKey="realizado" name="realizado" radius={[4,4,0,0]}>
-                {porCategoria.map(e=><Cell key={e.categoria} fill={e.variacao>10?'#dc2626':e.variacao>0?'#f59e0b':'#22c55e'}/>)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        {/* Gráfico mês atual por categoria */}
+        {porCategoria.length>0 && (
+          <div style={{ border:'1px solid #F0F0F0', borderRadius:12, padding:'20px 24px 16px' }}>
+            <div style={{ fontSize:13, fontWeight:600, marginBottom:4 }}>Mês Atual vs Anterior por Categoria</div>
+            <div style={{ fontSize:12, color:'#999', marginBottom:18 }}>{mesAnterior} → {mesAtual}</div>
+            <ResponsiveContainer width="100%" height={210}>
+              <BarChart data={porCategoria} margin={{ top:4, right:4, left:0, bottom:0 }} barCategoryGap="30%">
+                <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" vertical={false}/>
+                <XAxis dataKey="categoria" tick={{ fontSize:10, fill:'#BBB' }} axisLine={false} tickLine={false}/>
+                <YAxis tickFormatter={v=>`${(v/1000).toFixed(0)}k`} tick={{ fontSize:11, fill:'#BBB' }} axisLine={false} tickLine={false} width={44}/>
+                <Tooltip formatter={(v,n)=>[fmt(v),n==='anterior'?mesAnterior:mesAtual]} contentStyle={{ fontSize:12, border:'1px solid #F0F0F0', borderRadius:10 }}/>
+                <Legend formatter={n=>n==='anterior'?mesAnterior:mesAtual} iconSize={8} wrapperStyle={{ fontSize:11 }}/>
+                <Bar dataKey="anterior" name="anterior" fill="#F0F0F0" radius={[4,4,0,0]}/>
+                <Bar dataKey="atual" name="atual" radius={[4,4,0,0]}>
+                  {porCategoria.map(e=><Cell key={e.categoria} fill={e.difPct>10?'#dc2626':e.difPct>0?'#f59e0b':'#22c55e'}/>)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
 
-        {/* Tabela de itens — Geral / Por Loja */}
+        {/* Tabela itens Geral/Por Loja */}
         <div style={{ border:'1px solid #F0F0F0', borderRadius:12, overflow:'hidden' }}>
           <div style={{ padding:'14px 20px', borderBottom:'1px solid #F7F7F7', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:10 }}>
             <div>
-              <div style={{ fontSize:13, fontWeight:600 }}>Itens de Custo</div>
-              <div style={{ fontSize:12, color:'#999', marginTop:2 }}>
-                {lojaMode==='geral' ? 'Totais por categoria (todas as lojas consolidadas)' : 'Detalhado por subcategoria e loja'}
-              </div>
+              <div style={{ fontSize:13, fontWeight:600 }}>Itens — {mesAtual}</div>
+              <div style={{ fontSize:12, color:'#999', marginTop:2 }}>{dadosExibidos.length} itens · {fmt(totalExibido)}</div>
             </div>
-            <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+            <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
               <div style={{ display:'flex', gap:6 }}>
                 <TabBtn label="Geral"    ativo={lojaMode==='geral'}   onClick={()=>setLojaMode('geral')}/>
                 <TabBtn label="Por Loja" ativo={lojaMode==='porloja'} onClick={()=>setLojaMode('porloja')}/>
@@ -242,28 +284,23 @@ export default function CustoFixo() {
             <table style={{ width:'100%', borderCollapse:'collapse' }}>
               <thead><tr>
                 <TH ch="Categoria"/>
-                {lojaMode==='porloja' && <TH ch="Subcategoria"/>}
-                {(lojaMode==='porloja'||lojaFiltro==='Todas') && <TH ch="Loja"/>}
-                <TH ch="Orçado" right/>
-                <TH ch="Realizado" right/>
-                <TH ch="Variação" right/>
-                <TH ch="Dif. R$" right/>
+                {lojaMode==='porloja' && <TH ch="Loja"/>}
+                <TH ch={mesAnterior||'Anterior'} right/>
+                <TH ch={mesAtual||'Atual'} right/>
+                <TH ch="Var. R$" right/>
+                <TH ch="Var. %" right/>
               </tr></thead>
               <tbody>
-                {dadosExibidos.map((c,i)=>{
-                  const dif=c.realizado-c.orcado
-                  return (
-                    <tr key={i}>
-                      <TD ch={c.categoria}/>
-                      {lojaMode==='porloja' && <TD ch={c.subcategoria} muted/>}
-                      {(lojaMode==='porloja'||lojaFiltro==='Todas') && <TD ch={lojaMode==='geral'?c.loja:c.loja} muted/>}
-                      <TD ch={fmt(c.orcado)} mono muted right/>
-                      <TD ch={fmt(c.realizado)} mono right/>
-                      <td style={{ padding:'10px 14px', borderBottom:'1px solid #F7F7F7', textAlign:'right' }}><VarBadge pct={c.variacao}/></td>
-                      <td style={{ padding:'10px 14px', borderBottom:'1px solid #F7F7F7', fontSize:13, fontVariantNumeric:'tabular-nums', fontWeight:600, color:dif>0?'#dc2626':'#16a34a', textAlign:'right' }}>{dif>=0?'+':''}{fmt(dif)}</td>
-                    </tr>
-                  )
-                })}
+                {dadosExibidos.map((c,i)=>(
+                  <tr key={i}>
+                    <TD ch={c.categoria}/>
+                    {lojaMode==='porloja' && <TD ch={c.loja} muted/>}
+                    <TD ch={fmt(c.anterior)} mono muted right/>
+                    <TD ch={fmt(c.atual)} mono right/>
+                    <td style={{ padding:'10px 14px', borderBottom:'1px solid #F7F7F7', fontSize:13, fontVariantNumeric:'tabular-nums', fontWeight:600, color:c.difR>0?'#dc2626':'#16a34a', textAlign:'right' }}>{c.difR>=0?'+':''}{fmt(c.difR)}</td>
+                    <td style={{ padding:'10px 14px', borderBottom:'1px solid #F7F7F7', textAlign:'right' }}><VarBadge pct={c.difPct}/></td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
