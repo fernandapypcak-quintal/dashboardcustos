@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { useFinanceiro } from '../../hooks/useFinanceiro.jsx'
+import { useFinanceiro, sortMesLabel } from '../../hooks/useFinanceiro.jsx'
 import { useVariacaoMensal } from '../../hooks/useVariacaoMensal.js'
 import Header from '../layout/Header.jsx'
 import { fmt, fmtPct } from '../../utils.js'
@@ -7,10 +7,6 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 
 const CORES_CAT = { 'CMV':'#1a1a1a', 'Comissões':'#22c55e', 'Embalagens':'#f59e0b', 'Mão de obra variável':'#ef4444' }
 const CORES = Object.values(CORES_CAT)
-const ORDEM = ['Jan/24','Fev/24','Mar/24','Abr/24','Mai/24','Jun/24','Jul/24','Ago/24','Set/24','Out/24','Nov/24','Dez/24',
-               'Jan/25','Fev/25','Mar/25','Abr/25','Mai/25','Jun/25','Jul/25','Ago/25','Set/25','Out/25','Nov/25','Dez/25',
-               'Jan/26','Fev/26','Mar/26','Abr/26','Mai/26','Jun/26','Jul/26','Ago/26','Set/26','Out/26','Nov/26','Dez/26']
-
 const TH = ({ ch, right }) => <th style={{ fontSize:10, fontWeight:600, letterSpacing:'0.06em', textTransform:'uppercase', color:'#fff', background:'#1a1a1a', padding:'10px 14px', textAlign:right?'right':'left', whiteSpace:'nowrap' }}>{ch}</th>
 const TD = ({ ch, mono, muted, right, color }) => <td style={{ padding:'10px 14px', fontSize:13, borderBottom:'1px solid #F7F7F7', color:color||(muted?'#888':'#1a1a1a'), fontVariantNumeric:mono?'tabular-nums':undefined, textAlign:right?'right':'left' }}>{ch}</td>
 
@@ -23,24 +19,32 @@ function TabBtn({ label, ativo, onClick }) {
   return <button onClick={onClick} style={{ padding:'6px 16px', borderRadius:8, border:ativo?'none':'1px solid #E8E8E8', background:ativo?'#1a1a1a':'#fff', color:ativo?'#fff':'#666', fontSize:13, fontWeight:ativo?600:400, cursor:'pointer', fontFamily:'inherit' }}>{label}</button>
 }
 
-function useMoM(historicoCat, historicoTotal) {
+function useMoM(historicoCat, historicoTotal, mesFiltro) {
   return useMemo(() => {
-    const sorted = [...new Set([...historicoCat,...historicoTotal].map(h=>h.mes))].sort((a,b)=>(ORDEM.indexOf(a)<0?999:ORDEM.indexOf(a))-(ORDEM.indexOf(b)<0?999:ORDEM.indexOf(b)))
-    const ult = sorted[sorted.length-1], prev = sorted[sorted.length-2]
     const totalMap = {}
     historicoTotal.forEach(({mes,total_realizado})=>{ if(!totalMap[mes]) totalMap[mes]=0; totalMap[mes]+=total_realizado })
-    const t=totalMap[ult]||0, p=totalMap[prev]||0
+    const sorted = sortMesLabel(Object.keys(totalMap))
+    let ult, prev
+    if (mesFiltro && totalMap[mesFiltro] !== undefined) {
+      ult = mesFiltro
+      const idx = sorted.indexOf(mesFiltro)
+      prev = idx > 0 ? sorted[idx - 1] : null
+    } else {
+      ult  = sorted[sorted.length-1]
+      prev = sorted[sorted.length-2]
+    }
+    const t=totalMap[ult]||0, p=prev?(totalMap[prev]||0):0
     return { mesAtual:ult||'', mesAnterior:prev||'', totalMes:t, totalAnterior:p, varR:t-p, varPct:p>0?((t-p)/p)*100:0 }
-  }, [historicoCat, historicoTotal])
+  }, [historicoCat, historicoTotal, mesFiltro])
 }
 
 export default function CustoVariavel() {
-  const { historicoCatVariavelFiltrado, historicoVariavelFiltrado, lojaFiltro } = useFinanceiro()
+  const { historicoCatVariavelFiltrado, historicoVariavelFiltrado, lojaFiltro, mesFiltro } = useFinanceiro()
   const [topMode,  setTopMode]  = useState('todos')
   const [lojaMode, setLojaMode] = useState('geral')
 
   const { meses, categorias, dadosGrafico, tabelaHistorica, ranking } = useVariacaoMensal(historicoCatVariavelFiltrado)
-  const { mesAtual, mesAnterior, totalMes, totalAnterior, varR, varPct } = useMoM(historicoCatVariavelFiltrado, historicoVariavelFiltrado)
+  const { mesAtual, mesAnterior, totalMes, totalAnterior, varR, varPct } = useMoM(historicoCatVariavelFiltrado, historicoVariavelFiltrado, mesFiltro)
 
   const porCategoria = useMemo(() => {
     const cats = [...new Set(historicoCatVariavelFiltrado.map(h=>h.categoria))]

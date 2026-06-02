@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { useFinanceiro } from '../../hooks/useFinanceiro.jsx'
+import { useFinanceiro, sortMesLabel } from '../../hooks/useFinanceiro.jsx'
 import Header from '../layout/Header.jsx'
 import { fmt, fmtPct } from '../../utils.js'
 import {
@@ -7,19 +7,9 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell
 } from 'recharts'
 
-const ORDEM = ['Jan/24','Fev/24','Mar/24','Abr/24','Mai/24','Jun/24','Jul/24','Ago/24','Set/24','Out/24','Nov/24','Dez/24',
-               'Jan/25','Fev/25','Mar/25','Abr/25','Mai/25','Jun/25','Jul/25','Ago/25','Set/25','Out/25','Nov/25','Dez/25',
-               'Jan/26','Fev/26','Mar/26','Abr/26','Mai/26','Jun/26','Jul/26','Ago/26','Set/26','Out/26','Nov/26','Dez/26']
-
 const CORES_LOJAS = ['#1a1a1a','#22c55e','#3b82f6','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316','#6366f1','#84cc16']
 const CORES_CAT   = ['#1a1a1a','#22c55e','#3b82f6','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6']
 
-function sortM(arr) {
-  return [...arr].sort((a,b)=>{
-    const ia=ORDEM.indexOf(a.mes),ib=ORDEM.indexOf(b.mes)
-    return (ia<0?999:ia)-(ib<0?999:ib)
-  })
-}
 
 function SecaoTitle({ title, sub }) {
   return (
@@ -54,12 +44,12 @@ export default function Evolucao() {
     })
     add(historicoFiltrado, 'fixo')
     add(historicoVariavelFiltrado, 'variavel')
-    return sortM(Object.values(map)).map(r => ({ ...r, total: r.fixo + r.variavel }))
+    return sortMesLabel(Object.values(map)).map(r => ({ ...r, total: r.fixo + r.variavel }))
   }, [historicoFiltrado, historicoVariavelFiltrado])
 
   // ── 2. Por loja ao longo do tempo ────────────────────────────
   const lojas = useMemo(() => Array.from(new Set([...historico,...historicoVariavel].map(h=>h.loja))), [historico,historicoVariavel])
-  const mesesHist = useMemo(() => sortM(Array.from(new Set([...historico,...historicoVariavel].map(h=>h.mes))).map(m=>({mes:m}))).map(x=>x.mes), [historico,historicoVariavel])
+  const mesesHist = useMemo(() => sortMesLabel(Array.from(new Set([...historico,...historicoVariavel].map(h=>h.mes))).map(m=>({mes:m}))).map(x=>x.mes), [historico,historicoVariavel])
 
   const dadosPorLoja = useMemo(() => {
     const allH = [...historico, ...historicoVariavel]
@@ -75,7 +65,7 @@ export default function Evolucao() {
 
   // ── 3. Fixo separado por categoria ──────────────────────────
   const catsFixo = useMemo(() => Array.from(new Set(historicoCatFixoFiltrado.map(h=>h.categoria))), [historicoCatFixoFiltrado])
-  const mesesFixo = useMemo(() => sortM(Array.from(new Set(historicoCatFixoFiltrado.map(h=>h.mes))).map(m=>({mes:m}))).map(x=>x.mes), [historicoCatFixoFiltrado])
+  const mesesFixo = useMemo(() => sortMesLabel(Array.from(new Set(historicoCatFixoFiltrado.map(h=>h.mes))).map(m=>({mes:m}))).map(x=>x.mes), [historicoCatFixoFiltrado])
   const dadosFixoCat = useMemo(() => mesesFixo.map(mes => {
     const row = { mes }
     catsFixo.forEach(cat => {
@@ -87,7 +77,7 @@ export default function Evolucao() {
 
   // ── 4. Variável separado por categoria ───────────────────────
   const catsVar = useMemo(() => Array.from(new Set(historicoCatVariavelFiltrado.map(h=>h.categoria))), [historicoCatVariavelFiltrado])
-  const mesesVar = useMemo(() => sortM(Array.from(new Set(historicoCatVariavelFiltrado.map(h=>h.mes))).map(m=>({mes:m}))).map(x=>x.mes), [historicoCatVariavelFiltrado])
+  const mesesVar = useMemo(() => sortMesLabel(Array.from(new Set(historicoCatVariavelFiltrado.map(h=>h.mes))).map(m=>({mes:m}))).map(x=>x.mes), [historicoCatVariavelFiltrado])
   const dadosVarCat = useMemo(() => mesesVar.map(mes => {
     const row = { mes }
     catsVar.forEach(cat => {
@@ -101,7 +91,7 @@ export default function Evolucao() {
   const ranking = useMemo(() => {
     const todos = [...historicoCatFixoFiltrado, ...historicoCatVariavelFiltrado]
     const cats  = Array.from(new Set(todos.map(h=>h.categoria)))
-    const meses = sortM(Array.from(new Set(todos.map(h=>h.mes))).map(m=>({mes:m}))).map(x=>x.mes)
+    const meses = sortMesLabel(Array.from(new Set(todos.map(h=>h.mes))).map(m=>({mes:m}))).map(x=>x.mes)
     const ult = meses[meses.length-1], prev = meses[meses.length-2]
     if (!ult || !prev) return []
     return cats.map(cat => {

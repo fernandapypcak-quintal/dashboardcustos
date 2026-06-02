@@ -1,15 +1,11 @@
 import React, { useMemo, useState } from 'react'
-import { useFinanceiro } from '../../hooks/useFinanceiro.jsx'
+import { useFinanceiro, sortMesLabel } from '../../hooks/useFinanceiro.jsx'
 import { useVariacaoMensal } from '../../hooks/useVariacaoMensal.js'
 import Header from '../layout/Header.jsx'
 import { fmt, fmtPct } from '../../utils.js'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LineChart, Line, Legend } from 'recharts'
 
 const CORES = ['#1a1a1a','#22c55e','#f59e0b','#3b82f6','#ef4444','#8b5cf6','#ec4899','#14b8a6']
-const ORDEM = ['Jan/24','Fev/24','Mar/24','Abr/24','Mai/24','Jun/24','Jul/24','Ago/24','Set/24','Out/24','Nov/24','Dez/24',
-               'Jan/25','Fev/25','Mar/25','Abr/25','Mai/25','Jun/25','Jul/25','Ago/25','Set/25','Out/25','Nov/25','Dez/25',
-               'Jan/26','Fev/26','Mar/26','Abr/26','Mai/26','Jun/26','Jul/26','Ago/26','Set/26','Out/26','Nov/26','Dez/26']
-
 const TH = ({ ch, right }) => (
   <th style={{ fontSize:10, fontWeight:600, letterSpacing:'0.06em', textTransform:'uppercase', color:'#fff', background:'#1a1a1a', padding:'10px 14px', textAlign:right?'right':'left', whiteSpace:'nowrap' }}>{ch}</th>
 )
@@ -26,7 +22,7 @@ function TabBtn({ label, ativo, onClick }) {
 }
 
 export default function CustoFixo() {
-  const { custosFiltrados, historicoCatFixoFiltrado, historicoFiltrado, lojaFiltro } = useFinanceiro()
+  const { custosFiltrados, historicoCatFixoFiltrado, historicoFiltrado, lojaFiltro, mesFiltro } = useFinanceiro()
   const [topMode,  setTopMode]  = useState('todos')
   const [lojaMode, setLojaMode] = useState('geral')
 
@@ -39,12 +35,20 @@ export default function CustoFixo() {
       if (!map[mes]) map[mes] = 0
       map[mes] += total_realizado
     })
-    const sorted = Object.keys(map).sort((a,b) => (ORDEM.indexOf(a)<0?999:ORDEM.indexOf(a)) - (ORDEM.indexOf(b)<0?999:ORDEM.indexOf(b)))
-    const ult  = sorted[sorted.length-1]
-    const prev = sorted[sorted.length-2]
-    const t = map[ult]||0, p = map[prev]||0
+    const sorted = sortMesLabel(Object.keys(map))
+    // Se há filtro de mês, usa esse mês como "atual" e o anterior na lista
+    let ult, prev
+    if (mesFiltro && map[mesFiltro] !== undefined) {
+      ult = mesFiltro
+      const idx = sorted.indexOf(mesFiltro)
+      prev = idx > 0 ? sorted[idx - 1] : null
+    } else {
+      ult  = sorted[sorted.length - 1]
+      prev = sorted[sorted.length - 2]
+    }
+    const t = map[ult]||0, p = prev ? (map[prev]||0) : 0
     return { totalMes:t, totalAnterior:p, varR:t-p, varPct:p>0?((t-p)/p)*100:0, mesAtual:ult||'', mesAnterior:prev||'' }
-  }, [historicoFiltrado])
+  }, [historicoFiltrado, mesFiltro])
 
   // Por categoria — realizado mês atual vs anterior
   const porCategoria = useMemo(() => {

@@ -1,21 +1,11 @@
 import React, { useMemo } from 'react'
-import { useFinanceiro } from '../../hooks/useFinanceiro.jsx'
+import { useFinanceiro, sortMesLabel } from '../../hooks/useFinanceiro.jsx'
 import Header from '../layout/Header.jsx'
 import StatusBadge from '../ui/StatusBadge.jsx'
 import { fmt, fmtPct, diasAteVencimento } from '../../utils.js'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { TrendingUp, TrendingDown, AlertTriangle, DollarSign, Activity, ArrowUp, ArrowDown } from 'lucide-react'
 
-const ORDEM = ['Jan/24','Fev/24','Mar/24','Abr/24','Mai/24','Jun/24','Jul/24','Ago/24','Set/24','Out/24','Nov/24','Dez/24',
-               'Jan/25','Fev/25','Mar/25','Abr/25','Mai/25','Jun/25','Jul/25','Ago/25','Set/25','Out/25','Nov/25','Dez/25',
-               'Jan/26','Fev/26','Mar/26','Abr/26','Mai/26','Jun/26','Jul/26','Ago/26','Set/26','Out/26','Nov/26','Dez/26']
-
-function sortM(arr) {
-  return [...arr].sort((a,b) => {
-    const ia = ORDEM.indexOf(a.mes), ib = ORDEM.indexOf(b.mes)
-    return (ia<0?999:ia) - (ib<0?999:ib)
-  })
-}
 
 // Card grande estilo faturamento
 function BigCard({ label, valor, sub, subColor, icon: Icon, iconBg, iconColor }) {
@@ -79,7 +69,7 @@ export default function Home() {
     })
     add(historicoFiltrado, 'fixo')
     add(historicoVariavelFiltrado, 'variavel')
-    return sortM(Object.values(map)).slice(-6)
+    return sortMesLabel(Object.values(map)).slice(-6)
   }, [historicoFiltrado, historicoVariavelFiltrado])
 
   const { totalMes, variacaoPct, variacaoR, mesMostrado } = useMemo(() => {
@@ -93,7 +83,7 @@ export default function Home() {
 
   const { maiorAlta, maiorQueda } = useMemo(() => {
     const todos = [...historicoCatFixoFiltrado, ...historicoCatVariavelFiltrado]
-    const meses = sortM([...new Set(todos.map(h=>h.mes))].map(m=>({mes:m}))).map(x=>x.mes)
+    const meses = sortMesLabel([...new Set(todos.map(h=>h.mes))].map(m=>({mes:m}))).map(x=>x.mes)
     const ult = meses[meses.length-1], prev = meses[meses.length-2]
     if (!ult || !prev) return { maiorAlta:null, maiorQueda:null }
     const cats = [...new Set(todos.map(h=>h.categoria))]
