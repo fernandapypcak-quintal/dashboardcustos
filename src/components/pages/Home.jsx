@@ -69,7 +69,12 @@ export default function Home() {
     })
     add(historicoFiltrado, 'fixo')
     add(historicoVariavelFiltrado, 'variavel')
-    return sortMesLabel(Object.values(map)).slice(-6)
+    const sorted = Object.values(map)
+    sorted.sort((a, b) => {
+      const list = sortMesLabel(sorted.map(x => x.mes))
+      return list.indexOf(a.mes) - list.indexOf(b.mes)
+    })
+    return sorted.slice(-6)
   }, [historicoFiltrado, historicoVariavelFiltrado])
 
   const { totalMes, variacaoPct, variacaoR, mesMostrado } = useMemo(() => {

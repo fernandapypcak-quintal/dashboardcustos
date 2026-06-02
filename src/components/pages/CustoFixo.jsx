@@ -52,7 +52,7 @@ export default function CustoFixo() {
 
   // Por categoria — realizado mês atual vs anterior
   const porCategoria = useMemo(() => {
-    const mesesSorted = [...new Set(historicoCatFixoFiltrado.map(h=>h.mes))].sort((a,b)=>(ORDEM.indexOf(a)<0?999:ORDEM.indexOf(a))-(ORDEM.indexOf(b)<0?999:ORDEM.indexOf(b)))
+    const mesesSorted = [...new Set(historicoCatFixoFiltrado.map(h=>h.mes))].sort((a,b)=>sortMesLabel([a,b])[0]===a?-1:1)
     const ult = mesesSorted[mesesSorted.length-1]
     const prev = mesesSorted[mesesSorted.length-2]
     const cats = [...new Set(historicoCatFixoFiltrado.map(h=>h.categoria))]
@@ -67,7 +67,7 @@ export default function CustoFixo() {
 
   // Por loja — realizado mês atual
   const porLoja = useMemo(() => {
-    const mesesSorted = [...new Set(historicoFiltrado.map(h=>h.mes))].sort((a,b)=>(ORDEM.indexOf(a)<0?999:ORDEM.indexOf(a))-(ORDEM.indexOf(b)<0?999:ORDEM.indexOf(b)))
+    const mesesSorted = [...new Set(historicoFiltrado.map(h=>h.mes))].sort((a,b)=>sortMesLabel([a,b])[0]===a?-1:1)
     const ult  = mesesSorted[mesesSorted.length-1]
     const prev = mesesSorted[mesesSorted.length-2]
     const lojas = [...new Set(historicoFiltrado.map(h=>h.loja))]
@@ -81,7 +81,7 @@ export default function CustoFixo() {
 
   // Itens individuais com MoM
   const porItem = useMemo(() => {
-    const mesesSorted = [...new Set(historicoCatFixoFiltrado.map(h=>h.mes))].sort((a,b)=>(ORDEM.indexOf(a)<0?999:ORDEM.indexOf(a))-(ORDEM.indexOf(b)<0?999:ORDEM.indexOf(b)))
+    const mesesSorted = [...new Set(historicoCatFixoFiltrado.map(h=>h.mes))].sort((a,b)=>sortMesLabel([a,b])[0]===a?-1:1)
     const ult  = mesesSorted[mesesSorted.length-1]
     const prev = mesesSorted[mesesSorted.length-2]
     // Agrupa por categoria+loja

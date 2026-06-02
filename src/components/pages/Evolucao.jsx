@@ -44,7 +44,10 @@ export default function Evolucao() {
     })
     add(historicoFiltrado, 'fixo')
     add(historicoVariavelFiltrado, 'variavel')
-    return sortMesLabel(Object.values(map)).map(r => ({ ...r, total: r.fixo + r.variavel }))
+    const vals = Object.values(map)
+    const mesOrdem = sortMesLabel(vals.map(x => x.mes))
+    vals.sort((a, b) => mesOrdem.indexOf(a.mes) - mesOrdem.indexOf(b.mes))
+    return vals.map(r => ({ ...r, total: r.fixo + r.variavel }))
   }, [historicoFiltrado, historicoVariavelFiltrado])
 
   // ── 2. Por loja ao longo do tempo ────────────────────────────
