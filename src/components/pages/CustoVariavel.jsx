@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react'
 import { useFinanceiro, sortMesLabel } from '../../hooks/useFinanceiro.jsx'
 import { useVariacaoMensal } from '../../hooks/useVariacaoMensal.js'
 import Header from '../layout/Header.jsx'
+import TabelaHistoricaExpandivel from '../ui/TabelaHistoricaExpandivel.jsx'
 import { fmt, fmtPct } from '../../utils.js'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LineChart, Line, Legend } from 'recharts'
 
@@ -39,7 +40,7 @@ function useMoM(historicoCat, historicoTotal, mesFiltro) {
 }
 
 export default function CustoVariavel() {
-  const { historicoCatVariavelFiltrado, historicoVariavelFiltrado, lojaFiltro, mesFiltro } = useFinanceiro()
+  const { historicoCatVariavelFiltrado, historicoVariavelFiltrado, historicoDetalheVariavelFiltrado, lojaFiltro, mesFiltro } = useFinanceiro()
   const [topMode,  setTopMode]  = useState('todos')
   const [lojaMode, setLojaMode] = useState('geral')
 
@@ -150,40 +151,18 @@ export default function CustoVariavel() {
           </div>
         )}
 
-        {/* Tabela histórica */}
-        {tabelaHistorica.length>0 && (
+        {/* Tabela histórica expansível */}
+        {meses.length > 0 && (
           <div style={{ border:'1px solid #F0F0F0', borderRadius:12, overflow:'hidden' }}>
             <div style={{ padding:'14px 20px', borderBottom:'1px solid #F7F7F7' }}>
               <div style={{ fontSize:13, fontWeight:600 }}>Histórico por Categoria</div>
-              <div style={{ fontSize:12, color:'#999', marginTop:2 }}>Vermelho = subiu · Verde = caiu vs mês anterior</div>
+              <div style={{ fontSize:12, color:'#999', marginTop:2 }}>Clique na categoria para expandir as subcategorias · Vermelho = subiu · Verde = caiu vs mês anterior</div>
             </div>
-            <div style={{ overflowX:'auto' }}>
-              <table style={{ width:'100%', borderCollapse:'collapse' }}>
-                <thead><tr>
-                  <TH ch="Categoria"/>
-                  {meses.map(m=><TH key={m} ch={m}/>)}
-                  <TH ch="Var. R$" right/>
-                  <TH ch="Var. %" right/>
-                </tr></thead>
-                <tbody>
-                  {tabelaHistorica.map((row,i)=>(
-                    <tr key={i}>
-                      <td style={{ padding:'10px 14px', borderBottom:'1px solid #F7F7F7', display:'flex', alignItems:'center', gap:8 }}>
-                        <span style={{ width:8, height:8, borderRadius:'50%', background:CORES_CAT[row.categoria]||'#ccc', flexShrink:0 }}/>
-                        {row.categoria}
-                      </td>
-                      {meses.map((m,mi)=>{
-                        const val=row[m]||0, prev=mi>0?(row[meses[mi-1]]||0):null
-                        const changed=prev!==null&&val!==prev
-                        return <td key={m} style={{ padding:'10px 14px', borderBottom:'1px solid #F7F7F7', fontSize:12, fontVariantNumeric:'tabular-nums', color:changed?(val>prev?'#dc2626':'#16a34a'):'#1a1a1a', fontWeight:changed?600:400 }}>{val>0?fmt(val):'—'}</td>
-                      })}
-                      <td style={{ padding:'10px 14px', borderBottom:'1px solid #F7F7F7', fontSize:12, fontVariantNumeric:'tabular-nums', fontWeight:600, color:row.variacaoR>0?'#dc2626':'#16a34a', textAlign:'right' }}>{row.variacaoR>=0?'+':''}{fmt(row.variacaoR)}</td>
-                      <td style={{ padding:'10px 14px', borderBottom:'1px solid #F7F7F7', textAlign:'right' }}><VarBadge pct={row.variacaoPct}/></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <TabelaHistoricaExpandivel
+              historicoCat={historicoCatVariavelFiltrado}
+              historicoDetalhe={historicoDetalheVariavelFiltrado}
+              meses={meses}
+            />
           </div>
         )}
 

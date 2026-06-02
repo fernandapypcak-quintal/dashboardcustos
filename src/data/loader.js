@@ -132,3 +132,24 @@ export async function loadHistoricoCatVariavel() {
   if (USE_MOCK) return parseHistoricoCat(await getMock('historico_cat_variavel'))
   return parseHistoricoCat(await fetchTipo('historico_cat_variavel'))
 }
+
+// ── Histórico detalhado por subcategoria ─────────────────────
+export async function loadHistoricoDetalheFixo() {
+  if (USE_MOCK) return []  // sem mock — vem do Apps Script
+  return parseHistoricoDetalhe(await fetchTipo('historico_detalhe_fixo'))
+}
+
+export async function loadHistoricoDetalheVariavel() {
+  if (USE_MOCK) return []
+  return parseHistoricoDetalhe(await fetchTipo('historico_detalhe_variavel'))
+}
+
+function parseHistoricoDetalhe(rows) {
+  return rows.map(r => ({
+    mes:          r.mes       || r.mes_label || '',
+    loja:         r.loja      || r.unidade   || '',
+    categoria:    r.categoria || '',
+    subcategoria: r.subcategoria || r.descricao || '',
+    realizado:    Number(r.realizado || 0),
+  }))
+}

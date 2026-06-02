@@ -3,6 +3,7 @@ import {
   loadContas, loadCustosFixos, loadCustosVariaveis,
   loadHistorico, loadHistoricoVariavel,
   loadHistoricoCatFixo, loadHistoricoCatVariavel,
+  loadHistoricoDetalheFixo, loadHistoricoDetalheVariavel,
 } from '../data/loader.js'
 
 const FinanceiroCtx = createContext(null)
@@ -62,6 +63,8 @@ export function FinanceiroProvider({ children }) {
   const [historicoVariavel,    setHistoricoVariavel]    = useState([])
   const [historicoCatFixo,     setHistoricoCatFixo]     = useState([])
   const [historicoCatVariavel, setHistoricoCatVariavel] = useState([])
+  const [historicoDetalheFixo,    setHistoricoDetalheFixo]    = useState([])
+  const [historicoDetalheVariavel,setHistoricoDetalheVariavel]= useState([])
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState(null)
 
@@ -78,7 +81,7 @@ export function FinanceiroProvider({ children }) {
       loadHistoricoVariavel(),
       loadHistoricoCatFixo(),
       loadHistoricoCatVariavel(),
-    ]).then(([c, cf, cv, h, hv, hcf, hcv]) => {
+    ]).then(([c, cf, cv, h, hv, hcf, hcv, hdf, hdv]) => {
 
       // Normaliza o campo mes em históricos para Mmm/AA
       const normH = arr => arr.map(x => ({ ...x, mes: normalizarMesLabel(x.mes) }))
@@ -104,6 +107,8 @@ export function FinanceiroProvider({ children }) {
       setHistoricoVariavel(hvN)
       setHistoricoCatFixo(hcfN)
       setHistoricoCatVariavel(hcvN)
+      setHistoricoDetalheFixo(normH(hdf))
+      setHistoricoDetalheVariavel(normH(hdv))
       setMesFiltro(mesPadrao)
     })
     .catch(e => { console.error('[Financeiro] Erro:', e); setError(e.message) })
@@ -133,6 +138,14 @@ export function FinanceiroProvider({ children }) {
   const historicoCatVariavelFiltrado = useMemo(() => (
     lojaFiltro === 'Todas' ? historicoCatVariavel : historicoCatVariavel.filter(h => h.loja === lojaFiltro)
   ), [historicoCatVariavel, lojaFiltro])
+
+  const historicoDetalheFixoFiltrado = useMemo(() => (
+    lojaFiltro === 'Todas' ? historicoDetalheFixo : historicoDetalheFixo.filter(h => h.loja === lojaFiltro)
+  ), [historicoDetalheFixo, lojaFiltro])
+
+  const historicoDetalheVariavelFiltrado = useMemo(() => (
+    lojaFiltro === 'Todas' ? historicoDetalheVariavel : historicoDetalheVariavel.filter(h => h.loja === lojaFiltro)
+  ), [historicoDetalheVariavel, lojaFiltro])
 
   // Custos filtrados por loja E por mês (usando mes_label)
   const custosFiltrados = useMemo(() => {
@@ -185,6 +198,7 @@ export function FinanceiroProvider({ children }) {
       contasFiltradas, custosFiltrados, custosVariaveisFiltrados,
       historicoFiltrado, historicoVariavelFiltrado,
       historicoCatFixoFiltrado, historicoCatVariavelFiltrado,
+      historicoDetalheFixoFiltrado, historicoDetalheVariavelFiltrado,
       lojaFiltro, setLojaFiltro,
       mesFiltro,  setMesFiltro,
       mesesDisponiveis,
