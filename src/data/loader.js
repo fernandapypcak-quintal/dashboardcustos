@@ -2,9 +2,8 @@ import { APPS_SCRIPT_URL } from './config.js'
 
 const USE_MOCK = false
 
-async function fetchTipo(tipo, params = {}) {
-  const qs  = new URLSearchParams({ tipo, ...params }).toString()
-  const url = `${APPS_SCRIPT_URL}?${qs}`
+async function fetchTipo(tipo) {
+  const url = `${APPS_SCRIPT_URL}?tipo=${tipo}`
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), 25000)
   try {
@@ -21,116 +20,73 @@ async function fetchTipo(tipo, params = {}) {
   }
 }
 
-function parseContas(rows) {
-  return rows.map((r, i) => ({
-    id:         i + 1,
-    nome:       r.nome       || r.descricao  || '',
-    fornecedor: r.fornecedor || '',
-    valor:      Number(r.valor || 0),
-    vencimento: r.vencimento || r.vencto     || '',
-    status:     (r.status    || 'pago').toLowerCase(),
-    categoria:  r.categoria  || '',
-    tipo:       r.tipo       || 'Fixo',
-    centro:     r.centro     || r.unidade    || '',
-    observacao: r.observacao || '',
-  }))
-}
+// Parsers
+const parseContas = rows => rows.map((r,i) => ({
+  id: i+1, nome: r.nome||r.descricao||'', fornecedor: r.fornecedor||'',
+  valor: Number(r.valor||0), vencimento: r.vencimento||r.vencto||'',
+  status: (r.status||'pago').toLowerCase(), categoria: r.categoria||'',
+  tipo: r.tipo||'Fixo', centro: r.centro||r.unidade||'', observacao: r.observacao||'',
+}))
 
-function parseCustos(rows) {
-  return rows.map((r, i) => ({
-    id:           i + 1,
-    categoria:    r.categoria    || '',
-    subcategoria: r.subcategoria || r.descricao || '',
-    orcado:       Number(r.orcado    || 0),
-    realizado:    Number(r.realizado || 0),
-    mes:          r.mes  || '',
-    loja:         r.loja || r.unidade || '',
-    tipo:         r.tipo || '',
-  }))
-}
+// historico_unificado: { mes, loja, tipo, total_realizado }
+const parseHistoricoUnificado = rows => rows.map(r => ({
+  mes:             r.mes      || r.mes_label || '',
+  loja:            r.loja     || r.unidade   || '',
+  tipo:            r.tipo     || '',
+  total_realizado: Number(r.total_realizado  || 0),
+}))
 
-function parseHistorico(rows) {
-  return rows.map(r => ({
-    mes:             r.mes           || r.mes_label        || '',
-    loja:            r.loja          || r.unidade          || '',
-    total_realizado: Number(r.total_realizado              || 0),
-    total_orcado:    Number(r.total_orcado                 || 0),
-    tipo:            r.tipo          || '',
-  }))
-}
+// historico_cat_unificado: { mes, loja, categoria, tipo, realizado }
+const parseHistoricoCatUnificado = rows => rows.map(r => ({
+  mes:       r.mes       || r.mes_label || '',
+  loja:      r.loja      || r.unidade   || '',
+  categoria: r.categoria || '',
+  tipo:      r.tipo      || '',
+  realizado: Number(r.realizado || 0),
+}))
 
-function parseHistoricoCat(rows) {
-  return rows.map(r => ({
-    mes:       r.mes       || r.mes_label || '',
-    loja:      r.loja      || r.unidade   || '',
-    categoria: r.categoria || '',
-    realizado: Number(r.realizado         || 0),
-    tipo:      r.tipo      || '',
-  }))
-}
+// historico_detalhe_todos: { mes, loja, categoria, subcategoria, tipo, realizado }
+const parseHistoricoDetalheTodos = rows => (!rows||!Array.isArray(rows)) ? [] : rows.map(r => ({
+  mes:          r.mes          || r.mes_label || '',
+  loja:         r.loja         || r.unidade   || '',
+  categoria:    r.categoria    || '',
+  subcategoria: r.subcategoria || r.descricao || '',
+  tipo:         r.tipo         || '',
+  realizado:    Number(r.realizado || 0),
+}))
 
-function parseHistoricoDetalhe(rows) {
-  if (!rows || !Array.isArray(rows)) return []
-  return rows.map(r => ({
-    mes:          r.mes          || r.mes_label  || '',
-    loja:         r.loja         || r.unidade    || '',
-    categoria:    r.categoria    || '',
-    subcategoria: r.subcategoria || r.descricao  || '',
-    realizado:    Number(r.realizado || 0),
-    tipo:         r.tipo         || '',
-  }))
-}
-
-// ── Mock ──────────────────────────────────────────────────────
+// Mock fallback
 async function getMock(tipo) {
   try {
     const { MOCK_CONTAS, MOCK_CUSTOS_FIXOS, MOCK_HISTORICO, MOCK_HISTORICO_CAT_FIXO } = await import('./mockData.js')
     const { MOCK_CUSTOS_VARIAVEIS, MOCK_HISTORICO_VARIAVEL, MOCK_HISTORICO_CAT_VARIAVEL } = await import('./mockDataVariavel.js')
     const map = {
-      contas: MOCK_CONTAS, custos_fixos: MOCK_CUSTOS_FIXOS,
-      custos_variaveis: MOCK_CUSTOS_VARIAVEIS,
-      historico: MOCK_HISTORICO, historico_variavel: MOCK_HISTORICO_VARIAVEL,
-      historico_cat_fixo: MOCK_HISTORICO_CAT_FIXO,
-      historico_cat_variavel: MOCK_HISTORICO_CAT_VARIAVEL,
+      contas: MOCK_CONTAS,
+      historico_unificado: [...MOCK_HISTORICO.map(h=>({...h,tipo:'Fixo'})), ...MOCK_HISTORICO_VARIAVEL.map(h=>({...h,tipo:'Variável'}))],
+      historico_cat_unificado: [...MOCK_HISTORICO_CAT_FIXO.map(h=>({...h,tipo:'Fixo'})), ...MOCK_HISTORICO_CAT_VARIAVEL.map(h=>({...h,tipo:'Variável'}))],
+      historico_detalhe_todos: [],
     }
     return map[tipo] || []
   } catch { return [] }
 }
 
-// ── Exports ───────────────────────────────────────────────────
 export async function loadContas() {
-  if (USE_MOCK) return await getMock('contas')
+  if (USE_MOCK) return parseContas(await getMock('contas'))
   return parseContas(await fetchTipo('contas'))
 }
-export async function loadCustosFixos() {
-  if (USE_MOCK) return parseCustos(await getMock('custos_fixos'))
-  return parseCustos(await fetchTipo('custos_fixos'))
+
+// Carrega TUDO de uma vez — o filtro acontece no cliente
+export async function loadHistoricoUnificado() {
+  if (USE_MOCK) return parseHistoricoUnificado(await getMock('historico_unificado'))
+  return parseHistoricoUnificado(await fetchTipo('historico_unificado'))
 }
-export async function loadCustosVariaveis() {
-  if (USE_MOCK) return parseCustos(await getMock('custos_variaveis'))
-  return parseCustos(await fetchTipo('custos_variaveis'))
+
+export async function loadHistoricoCatUnificado() {
+  if (USE_MOCK) return parseHistoricoCatUnificado(await getMock('historico_cat_unificado'))
+  return parseHistoricoCatUnificado(await fetchTipo('historico_cat_unificado'))
 }
-export async function loadHistorico() {
-  if (USE_MOCK) return parseHistorico(await getMock('historico'))
-  return parseHistorico(await fetchTipo('historico'))
-}
-export async function loadHistoricoVariavel() {
-  if (USE_MOCK) return parseHistorico(await getMock('historico_variavel'))
-  return parseHistorico(await fetchTipo('historico_variavel'))
-}
-export async function loadHistoricoCatFixo() {
-  if (USE_MOCK) return parseHistoricoCat(await getMock('historico_cat_fixo'))
-  return parseHistoricoCat(await fetchTipo('historico_cat_fixo'))
-}
-export async function loadHistoricoCatVariavel() {
-  if (USE_MOCK) return parseHistoricoCat(await getMock('historico_cat_variavel'))
-  return parseHistoricoCat(await fetchTipo('historico_cat_variavel'))
-}
-export async function loadHistoricoDetalheFixo() {
+
+export async function loadHistoricoDetalheTodos() {
   if (USE_MOCK) return []
-  return parseHistoricoDetalhe(await fetchTipo('historico_detalhe_fixo'))
-}
-export async function loadHistoricoDetalheVariavel() {
-  if (USE_MOCK) return []
-  return parseHistoricoDetalhe(await fetchTipo('historico_detalhe_variavel'))
+  return parseHistoricoDetalheTodos(await fetchTipo('historico_detalhe_todos'))
 }
