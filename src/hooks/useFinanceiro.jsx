@@ -81,10 +81,15 @@ export function FinanceiroProvider({ children }) {
       loadHistoricoVariavel(),
       loadHistoricoCatFixo(),
       loadHistoricoCatVariavel(),
+      loadHistoricoDetalheFixo(),
+      loadHistoricoDetalheVariavel(),
     ]).then(([c, cf, cv, h, hv, hcf, hcv, hdf, hdv]) => {
 
+      // Garante que tudo é array antes de processar
+      const safe = (x) => Array.isArray(x) ? x : []
+
       // Normaliza o campo mes em históricos para Mmm/AA
-      const normH = arr => arr.map(x => ({ ...x, mes: normalizarMesLabel(x.mes) }))
+      const normH = arr => safe(arr).map(x => ({ ...x, mes: normalizarMesLabel(x.mes) }))
 
       const hN   = normH(h)
       const hvN  = normH(hv)
@@ -100,9 +105,9 @@ export function FinanceiroProvider({ children }) {
       console.log('[Financeiro] Meses disponíveis:', todosMeses)
       console.log('[Financeiro] Mês padrão:', mesPadrao)
 
-      setContas(c)
-      setCustosFixos(cf)
-      setCustosVariaveis(cv)
+      setContas(safe(c))
+      setCustosFixos(safe(cf))
+      setCustosVariaveis(safe(cv))
       setHistorico(hN)
       setHistoricoVariavel(hvN)
       setHistoricoCatFixo(hcfN)
