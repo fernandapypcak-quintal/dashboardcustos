@@ -15,7 +15,6 @@ async function fetchTipo(tipo, params = {}) {
   const timer = setTimeout(() => controller.abort(), 20000) // 20s timeout
 
   try {
-    // Apps Script exige mode: 'no-cors' NÃO — precisa de redirect follow
     const res = await fetch(url, {
       method: 'GET',
       signal: controller.signal,
@@ -24,7 +23,10 @@ async function fetchTipo(tipo, params = {}) {
     clearTimeout(timer)
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const data = await res.json()
-    if (data && data.erro) throw new Error(`Apps Script: ${data.erro}`)
+    if (data && data.erro) {
+      console.warn(`[loader] fetchTipo(${tipo}) retornou erro:`, data.erro)
+      return []
+    }
     return Array.isArray(data) ? data : []
   } catch (e) {
     clearTimeout(timer)
@@ -135,21 +137,24 @@ export async function loadHistoricoCatVariavel() {
 
 // ── Histórico detalhado por subcategoria ─────────────────────
 export async function loadHistoricoDetalheFixo() {
-  if (USE_MOCK) return []  // sem mock — vem do Apps Script
-  return parseHistoricoDetalhe(await fetchTipo('historico_detalhe_fixo'))
+  if (USE_MOCK) return []
+  const rows = await fetchTipo('historico_detalhe_fixo')
+  return parseHistoricoDetalhe(Array.isArray(rows) ? rows : [])
 }
 
 export async function loadHistoricoDetalheVariavel() {
   if (USE_MOCK) return []
-  return parseHistoricoDetalhe(await fetchTipo('historico_detalhe_variavel'))
+  const rows = await fetchTipo('historico_detalhe_variavel')
+  return parseHistoricoDetalhe(Array.isArray(rows) ? rows : [])
 }
 
 function parseHistoricoDetalhe(rows) {
+  if (!rows || !Array.isArray(rows)) return []
   return rows.map(r => ({
-    mes:          r.mes       || r.mes_label || '',
-    loja:         r.loja      || r.unidade   || '',
-    categoria:    r.categoria || '',
-    subcategoria: r.subcategoria || r.descricao || '',
+    mes:          r.mes          || r.mes_label  || '',
+    loja:         r.loja         || r.unidade    || '',
+    categoria:    r.categoria    || '',
+    subcategoria: r.subcategoria || r.descricao  || '',
     realizado:    Number(r.realizado || 0),
   }))
 }
