@@ -91,41 +91,37 @@ export function FinanceiroProvider({ children }) {
     return r
   }
 
-  // ── historico agregado (para gráficos de evolução) ───────────
-  // Separa em fixo/variável/capex/fora para os gráficos existentes
+  // ── historico agregado — sempre arrays ──────────────────────
   const historicoFiltrado = useMemo(() => {
-    return filtrarHist(historicoRaw)
-      .filter(h => h.tipo === 'Fixo' || (tiposAtivos.includes('Fixo') && h.tipo === 'Fixo'))
-      .reduce((acc, h) => {
+    const map = {}
+    historicoRaw
+      .filter(h => h.tipo === 'Fixo')
+      .filter(h => lojaFiltro === 'Todas' || h.loja === lojaFiltro)
+      .forEach(h => {
         const key = h.mes + '||' + h.loja
-        if (!acc[key]) acc[key] = { mes:h.mes, loja:h.loja, total_realizado:0 }
-        acc[key].total_realizado += h.total_realizado
-        return acc
-      }, {})
-  }, [historicoRaw, lojaFiltro, tiposAtivos])
-
-  // Converte de objeto para array ordenado
-  const historicoFiltradoArr = useMemo(() =>
-    sortMesLabel([...new Set(Object.values(historicoFiltrado).map(x=>x.mes))])
-      .flatMap(mes => Object.values(historicoFiltrado).filter(x=>x.mes===mes))
-  , [historicoFiltrado])
+        if (!map[key]) map[key] = { mes:h.mes, loja:h.loja, total_realizado:0 }
+        map[key].total_realizado += h.total_realizado
+      })
+    const arr = Object.values(map)
+    const ordem = sortMesLabel(arr.map(x=>x.mes))
+    return arr.sort((a,b) => ordem.indexOf(a.mes) - ordem.indexOf(b.mes))
+  }, [historicoRaw, lojaFiltro])
 
   const historicoVariavelFiltrado = useMemo(() => {
     const tiposVar = tiposAtivos.filter(t => t !== 'Fixo')
-    let r = historicoRaw.filter(h => tiposVar.includes(h.tipo))
-    if (lojaFiltro !== 'Todas') r = r.filter(h => h.loja === lojaFiltro)
-    return r.reduce((acc, h) => {
-      const key = h.mes + '||' + h.loja
-      if (!acc[key]) acc[key] = { mes:h.mes, loja:h.loja, total_realizado:0 }
-      acc[key].total_realizado += h.total_realizado
-      return acc
-    }, {})
+    const map = {}
+    historicoRaw
+      .filter(h => tiposVar.includes(h.tipo))
+      .filter(h => lojaFiltro === 'Todas' || h.loja === lojaFiltro)
+      .forEach(h => {
+        const key = h.mes + '||' + h.loja
+        if (!map[key]) map[key] = { mes:h.mes, loja:h.loja, total_realizado:0 }
+        map[key].total_realizado += h.total_realizado
+      })
+    const arr = Object.values(map)
+    const ordem = sortMesLabel(arr.map(x=>x.mes))
+    return arr.sort((a,b) => ordem.indexOf(a.mes) - ordem.indexOf(b.mes))
   }, [historicoRaw, lojaFiltro, tiposAtivos])
-
-  const historicoVariavelFiltradoArr = useMemo(() =>
-    sortMesLabel([...new Set(Object.values(historicoVariavelFiltrado).map(x=>x.mes))])
-      .flatMap(mes => Object.values(historicoVariavelFiltrado).filter(x=>x.mes===mes))
-  , [historicoVariavelFiltrado])
 
   // ── historicoCat filtrado ────────────────────────────────────
   const historicoCatFixoFiltrado = useMemo(() => {
@@ -186,8 +182,8 @@ export function FinanceiroProvider({ children }) {
     <FinanceiroCtx.Provider value={{
       loading, error,
       contas, contasFiltradas,
-      historicoFiltrado:        historicoFiltradoArr,
-      historicoVariavelFiltrado:historicoVariavelFiltradoArr,
+      historicoFiltrado,
+      historicoVariavelFiltrado,
       historicoCatFixoFiltrado,
       historicoCatVariavelFiltrado,
       historicoDetalheFixoFiltrado,

@@ -3,6 +3,7 @@ import { useFinanceiro, sortMesLabel } from '../../hooks/useFinanceiro.jsx'
 import { useVariacaoMensal } from '../../hooks/useVariacaoMensal.js'
 import Header from '../layout/Header.jsx'
 import TabelaHistoricaExpandivel from '../ui/TabelaHistoricaExpandivel.jsx'
+import RankingCategorias from '../ui/RankingCategorias.jsx'
 import { fmt, fmtPct } from '../../utils.js'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LineChart, Line, Legend } from 'recharts'
 
@@ -105,6 +106,12 @@ export default function CustoVariavel() {
             </div>
           ))}
         </div>
+
+        {/* Ranking visual */}
+        <RankingCategorias
+          historicoCat={historicoCatVariavelFiltrado}
+          titulo="Ranking de Custo Variável por Categoria"
+        />
 
         {/* Ranking */}
         {(ranking.maioresAltas.length>0||ranking.maioresBaixas.length>0) && (

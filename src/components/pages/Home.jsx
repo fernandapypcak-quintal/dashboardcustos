@@ -3,6 +3,7 @@ import { useFinanceiro, sortMesLabel } from '../../hooks/useFinanceiro.jsx'
 import Header from '../layout/Header.jsx'
 import StatusBadge from '../ui/StatusBadge.jsx'
 import { fmt, fmtPct, diasAteVencimento } from '../../utils.js'
+import Semaforos from '../ui/Semaforos.jsx'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { TrendingUp, TrendingDown, AlertTriangle, DollarSign, Activity, ArrowUp, ArrowDown } from 'lucide-react'
 
@@ -165,6 +166,12 @@ export default function Home() {
             icon={TrendingDown} iconBg="#F0FDF4" iconColor="#16a34a"
           />
         </div>
+
+        {/* Radar de variações */}
+        <Semaforos
+          historicoCatFixo={historicoCatFixoFiltrado}
+          historicoCatVariavel={historicoCatVariavelFiltrado}
+        />
 
         {/* Gráfico evolução */}
         <div style={{ border:'1px solid #F0F0F0', borderRadius:12, padding:'20px 24px 16px' }}>
