@@ -3,33 +3,16 @@ import { useFinanceiro, sortMesLabel } from '../../hooks/useFinanceiro.jsx'
 import Header from '../layout/Header.jsx'
 import StatusBadge from '../ui/StatusBadge.jsx'
 import { fmt, fmtPct, diasAteVencimento } from '../../utils.js'
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { TrendingUp, TrendingDown, AlertTriangle, DollarSign, Activity, ArrowUp, ArrowDown } from 'lucide-react'
 
-
-// Card grande estilo faturamento
-function BigCard({ label, valor, sub, subColor, icon: Icon, iconBg, iconColor }) {
-  // ── Fora do escopo ───────────────────────────────────────────
-  const dadosFora = useMemo(() => {
-    const foraItems = (historicoRaw||[]).filter(h => h.tipo === 'Fora')
-    const foraLoja  = lojaFiltro !== 'Todas' ? foraItems.filter(h => h.loja === lojaFiltro) : foraItems
-    const porCat = {}, porMes = {}
-    foraLoja.forEach(({ categoria, mes, total_realizado }) => {
-      porCat[categoria] = (porCat[categoria]||0) + total_realizado
-      porMes[mes]       = (porMes[mes]||0)       + total_realizado
-    })
-    const mesesFora = sortMesLabel(Object.keys(porMes)).slice(-5)
-    const total = Object.values(porCat).reduce((s,v)=>s+v,0)
-    return { porCat, porMes, mesesFora, total }
-  }, [historicoRaw, lojaFiltro])
-
-
+function BigCard({ label, valor, sub, icon: Icon, iconBg, iconColor }) {
   return (
     <div style={{ background:'#fff', border:'1px solid #F0F0F0', borderRadius:12, padding:'20px 22px', display:'flex', flexDirection:'column', gap:12, minWidth:0 }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
         <span style={{ fontSize:11, fontWeight:500, letterSpacing:'0.05em', textTransform:'uppercase', color:'#999' }}>{label}</span>
         {Icon && (
-          <div style={{ width:32, height:32, borderRadius:8, background: iconBg||'#F5F5F5', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+          <div style={{ width:32, height:32, borderRadius:8, background:iconBg||'#F5F5F5', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
             <Icon size={15} color={iconColor||'#999'}/>
           </div>
         )}
@@ -37,11 +20,7 @@ function BigCard({ label, valor, sub, subColor, icon: Icon, iconBg, iconColor })
       <div style={{ fontSize:30, fontWeight:700, color:'#1a1a1a', lineHeight:1, letterSpacing:'-0.5px', fontVariantNumeric:'tabular-nums', wordBreak:'break-word' }}>
         {valor}
       </div>
-      {sub && (
-        <div style={{ fontSize:12.5, fontWeight:500, color: subColor||'#999', display:'flex', alignItems:'center', gap:4 }}>
-          {sub}
-        </div>
-      )}
+      {sub && <div style={{ fontSize:12.5 }}>{sub}</div>}
     </div>
   )
 }
@@ -69,41 +48,42 @@ function AlertaItem({ conta }) {
 
 export default function Home() {
   const {
-    contasFiltradas, lojaFiltro, mesFiltro, historicoRaw,
+    contasFiltradas, lojaFiltro,
     historicoFiltrado, historicoVariavelFiltrado,
     historicoCatFixoFiltrado, historicoCatVariavelFiltrado,
+    historicoRaw,
   } = useFinanceiro()
 
   const hoje = new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long', year:'numeric' })
 
+  // ── Evolução gráfico ─────────────────────────────────────
   const evolucao = useMemo(() => {
     const map = {}
-    const add = (arr, campo) => arr.forEach(({ mes, total_realizado }) => {
+    const add = (arr, campo) => (arr||[]).forEach(({ mes, total_realizado }) => {
       if (!map[mes]) map[mes] = { mes, fixo:0, variavel:0 }
       map[mes][campo] += total_realizado
     })
-    add(historicoFiltrado, 'fixo')
+    add(historicoFiltrado,         'fixo')
     add(historicoVariavelFiltrado, 'variavel')
-    const sorted = Object.values(map)
-    sorted.sort((a, b) => {
-      const list = sortMesLabel(sorted.map(x => x.mes))
-      return list.indexOf(a.mes) - list.indexOf(b.mes)
-    })
-    return sorted.slice(-6)
+    const vals = Object.values(map)
+    const ordem = sortMesLabel(vals.map(x=>x.mes))
+    vals.sort((a,b) => ordem.indexOf(a.mes) - ordem.indexOf(b.mes))
+    return vals.slice(-6)
   }, [historicoFiltrado, historicoVariavelFiltrado])
 
+  // ── KPIs ─────────────────────────────────────────────────
   const { totalMes, variacaoPct, variacaoR, mesMostrado } = useMemo(() => {
     if (!evolucao.length) return { totalMes:0, variacaoPct:0, variacaoR:0, mesMostrado:'' }
     const ult  = evolucao[evolucao.length-1]
     const prev = evolucao.length > 1 ? evolucao[evolucao.length-2] : null
     const tot  = ult.fixo + ult.variavel
     const ant  = prev ? prev.fixo + prev.variavel : 0
-    return { totalMes:tot, variacaoPct: ant>0?((tot-ant)/ant)*100:0, variacaoR:tot-ant, mesMostrado:ult.mes }
+    return { totalMes:tot, variacaoPct:ant>0?((tot-ant)/ant)*100:0, variacaoR:tot-ant, mesMostrado:ult.mes }
   }, [evolucao])
 
   const { maiorAlta, maiorQueda } = useMemo(() => {
-    const todos = [...historicoCatFixoFiltrado, ...historicoCatVariavelFiltrado]
-    const meses = sortMesLabel([...new Set(todos.map(h=>h.mes))].map(m=>({mes:m}))).map(x=>x.mes)
+    const todos = [...(historicoCatFixoFiltrado||[]), ...(historicoCatVariavelFiltrado||[])]
+    const meses = sortMesLabel([...new Set(todos.map(h=>h.mes))])
     const ult = meses[meses.length-1], prev = meses[meses.length-2]
     if (!ult || !prev) return { maiorAlta:null, maiorQueda:null }
     const cats = [...new Set(todos.map(h=>h.categoria))]
@@ -115,38 +95,32 @@ export default function Home() {
     return { maiorAlta:vars[0]||null, maiorQueda:vars[vars.length-1]||null }
   }, [historicoCatFixoFiltrado, historicoCatVariavelFiltrado])
 
+  // ── Por loja ─────────────────────────────────────────────
   const porUnidade = useMemo(() => {
-    const toLabel = m => {
-      if (!m) return ''
-      const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
-      const [a,mo] = m.split('-')
-      return `${MESES[parseInt(mo)-1]}/${a.substring(2)}`
-    }
-    const lbl = mesFiltro ? toLabel(mesFiltro) : null
     const map = {}
-    const add = arr => arr.forEach(({ loja, total_realizado, mes }) => {
-      if (lbl && mes !== lbl && mes !== mesFiltro) return
+    const add = arr => (arr||[]).forEach(({ loja, total_realizado }) => {
       if (!map[loja]) map[loja] = { loja, total:0 }
       map[loja].total += total_realizado
     })
     add(historicoFiltrado); add(historicoVariavelFiltrado)
     const lista = Object.values(map).sort((a,b)=>b.total-a.total)
     const grand = lista.reduce((s,l)=>s+l.total,0)
-    return lista.map(l=>({ ...l, pct: grand>0?(l.total/grand)*100:0 }))
-  }, [historicoFiltrado, historicoVariavelFiltrado, mesFiltro])
+    return lista.map(l=>({ ...l, pct:grand>0?(l.total/grand)*100:0 }))
+  }, [historicoFiltrado, historicoVariavelFiltrado])
 
+  // ── Alertas ───────────────────────────────────────────────
   const alertas = useMemo(() => {
     const h = new Date(); h.setHours(0,0,0,0)
     const e7 = new Date(h.getTime()+7*86400000)
-    return [...contasFiltradas]
+    return [...(contasFiltradas||[])]
       .filter(c => c.status!=='pago' && (c.status==='vencido'||new Date(c.vencimento)<=e7))
       .sort((a,b)=>({vencido:0,pendente:1}[a.status]??2)-({vencido:0,pendente:1}[b.status]??2)||b.valor-a.valor)
       .slice(0,6)
   }, [contasFiltradas])
 
-  const totalVencido = contasFiltradas.filter(c=>c.status==='vencido').reduce((s,c)=>s+c.valor,0)
+  const totalVencido = (contasFiltradas||[]).filter(c=>c.status==='vencido').reduce((s,c)=>s+c.valor,0)
 
-  // ── Fora do escopo ───────────────────────────────────────────
+  // ── Fora do escopo ────────────────────────────────────────
   const dadosFora = useMemo(() => {
     const foraItems = (historicoRaw||[]).filter(h => h.tipo === 'Fora')
     const foraLoja  = lojaFiltro !== 'Todas' ? foraItems.filter(h => h.loja === lojaFiltro) : foraItems
@@ -160,55 +134,39 @@ export default function Home() {
     return { porCat, porMes, mesesFora, total }
   }, [historicoRaw, lojaFiltro])
 
-
   return (
     <div style={{ background:'#fff', minHeight:'100vh' }}>
       <Header title="Visão Geral" subtitle={hoje}/>
-
       <div style={{ padding:'24px 28px', display:'flex', flexDirection:'column', gap:20 }}>
 
-        {/* ── 4 KPI cards em linha ── */}
+        {/* KPIs */}
         <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14 }}>
           <BigCard
-            label="Custo Total do Mês"
-            valor={fmt(totalMes)}
-            sub={mesMostrado || '—'}
+            label="Custo Total do Mês" valor={fmt(totalMes)}
+            sub={<span style={{ color:'#999', fontSize:12 }}>{mesMostrado||'—'}</span>}
             icon={DollarSign} iconBg="#F0FDF4" iconColor="#16a34a"
           />
           <BigCard
-            label="Variação vs Mês Anterior"
-            valor={fmtPct(variacaoPct)}
-            sub={
-              <span style={{ color: variacaoPct>5?'#dc2626':variacaoPct>0?'#d97706':'#16a34a', display:'flex', alignItems:'center', gap:4 }}>
-                {variacaoPct >= 0 ? <ArrowUp size={12}/> : <ArrowDown size={12}/>}
-                {variacaoR >= 0 ? '+' : ''}{fmt(variacaoR)} vs mês anterior
-              </span>
-            }
+            label="Variação vs Mês Anterior" valor={fmtPct(variacaoPct)}
+            sub={<span style={{ color:variacaoPct>5?'#dc2626':variacaoPct>0?'#d97706':'#16a34a', display:'flex', alignItems:'center', gap:4 }}>
+              {variacaoPct>=0?<ArrowUp size={12}/>:<ArrowDown size={12}/>}
+              {variacaoR>=0?'+':''}{fmt(variacaoR)} vs mês anterior
+            </span>}
             icon={Activity} iconBg="#F5F5F5" iconColor="#999"
           />
           <BigCard
-            label="Maior Alta do Mês"
-            valor={maiorAlta ? maiorAlta.categoria : '—'}
-            sub={maiorAlta ? (
-              <span style={{ color:'#dc2626', display:'flex', alignItems:'center', gap:4 }}>
-                <ArrowUp size={12}/>+{fmt(maiorAlta.difR)} ({fmtPct(maiorAlta.difPct)})
-              </span>
-            ) : null}
+            label="Maior Alta do Mês" valor={maiorAlta?maiorAlta.categoria:'—'}
+            sub={maiorAlta?<span style={{ color:'#dc2626', display:'flex', alignItems:'center', gap:4 }}><ArrowUp size={12}/>+{fmt(maiorAlta.difR)} ({fmtPct(maiorAlta.difPct)})</span>:null}
             icon={TrendingUp} iconBg="#FEF2F2" iconColor="#dc2626"
           />
           <BigCard
-            label="Maior Queda do Mês"
-            valor={maiorQueda && maiorQueda.difR < 0 ? maiorQueda.categoria : '—'}
-            sub={maiorQueda && maiorQueda.difR < 0 ? (
-              <span style={{ color:'#16a34a', display:'flex', alignItems:'center', gap:4 }}>
-                <ArrowDown size={12}/>{fmt(maiorQueda.difR)} ({fmtPct(maiorQueda.difPct)})
-              </span>
-            ) : null}
+            label="Maior Queda do Mês" valor={maiorQueda&&maiorQueda.difR<0?maiorQueda.categoria:'—'}
+            sub={maiorQueda&&maiorQueda.difR<0?<span style={{ color:'#16a34a', display:'flex', alignItems:'center', gap:4 }}><ArrowDown size={12}/>{fmt(maiorQueda.difR)} ({fmtPct(maiorQueda.difPct)})</span>:null}
             icon={TrendingDown} iconBg="#F0FDF4" iconColor="#16a34a"
           />
         </div>
 
-        {/* ── Gráfico evolução (full width) ── */}
+        {/* Gráfico evolução */}
         <div style={{ border:'1px solid #F0F0F0', borderRadius:12, padding:'20px 24px 16px' }}>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
             <div>
@@ -216,12 +174,8 @@ export default function Home() {
               <div style={{ fontSize:12, color:'#999', marginTop:2 }}>{lojaFiltro} · últimos 6 meses</div>
             </div>
             <div style={{ display:'flex', gap:16, fontSize:12, color:'#999', alignItems:'center' }}>
-              <span style={{ display:'flex', alignItems:'center', gap:6 }}>
-                <span style={{ width:12, height:2, background:'#1a1a1a', display:'inline-block', borderRadius:1 }}/>Custo Fixo
-              </span>
-              <span style={{ display:'flex', alignItems:'center', gap:6 }}>
-                <span style={{ width:12, height:2, background:'#22c55e', display:'inline-block', borderRadius:1 }}/>Custo Variável
-              </span>
+              <span style={{ display:'flex', alignItems:'center', gap:6 }}><span style={{ width:12, height:2, background:'#1a1a1a', display:'inline-block', borderRadius:1 }}/>Custo Fixo</span>
+              <span style={{ display:'flex', alignItems:'center', gap:6 }}><span style={{ width:12, height:2, background:'#22c55e', display:'inline-block', borderRadius:1 }}/>Custo Variável</span>
             </div>
           </div>
           <ResponsiveContainer width="100%" height={220}>
@@ -236,35 +190,29 @@ export default function Home() {
                   <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" vertical={false}/>
-              <XAxis dataKey="mes" tick={{ fontSize:12, fill:'#BBB', fontFamily:'Inter' }} axisLine={false} tickLine={false}/>
-              <YAxis tickFormatter={v=>`${(v/1000).toFixed(0)}k`} tick={{ fontSize:12, fill:'#BBB', fontFamily:'Inter' }} axisLine={false} tickLine={false} width={44}/>
-              <Tooltip
-                formatter={(v,n)=>[fmt(v), n==='fixo'?'Custo Fixo':'Custo Variável']}
-                contentStyle={{ fontSize:12, border:'1px solid #F0F0F0', borderRadius:10, boxShadow:'0 4px 20px rgba(0,0,0,0.08)', fontFamily:'Inter' }}
-              />
+              <XAxis dataKey="mes" tick={{ fontSize:12, fill:'#BBB' }} axisLine={false} tickLine={false}/>
+              <YAxis tickFormatter={v=>`${(v/1000).toFixed(0)}k`} tick={{ fontSize:12, fill:'#BBB' }} axisLine={false} tickLine={false} width={44}/>
+              <Tooltip formatter={(v,n)=>[fmt(v),n==='fixo'?'Custo Fixo':'Custo Variável']} contentStyle={{ fontSize:12, border:'1px solid #F0F0F0', borderRadius:10 }}/>
               <Area type="monotone" dataKey="variavel" stackId="1" stroke="#22c55e" strokeWidth={2} fill="url(#gV)" dot={false}/>
               <Area type="monotone" dataKey="fixo"     stackId="1" stroke="#1a1a1a" strokeWidth={2} fill="url(#gF)" dot={false}/>
             </AreaChart>
           </ResponsiveContainer>
         </div>
 
-        {/* ── Por loja + Alertas (side by side) ── */}
+        {/* Por loja + Alertas */}
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
-
-          {/* Por loja */}
           <div style={{ border:'1px solid #F0F0F0', borderRadius:12, overflow:'hidden' }}>
             <div style={{ padding:'16px 20px 14px', borderBottom:'1px solid #F7F7F7' }}>
               <div style={{ fontSize:13, fontWeight:600, color:'#1a1a1a' }}>Por Loja</div>
               <div style={{ fontSize:12, color:'#999', marginTop:2 }}>Custo total do período</div>
             </div>
             <div style={{ padding:'4px 0', maxHeight:320, overflowY:'auto' }}>
-              {porUnidade.length === 0
-                ? <div style={{ padding:'20px', color:'#CCC', fontSize:13 }}>Sem dados para o filtro selecionado</div>
-                : porUnidade.map((u,i) => (
+              {porUnidade.length===0
+                ? <div style={{ padding:'20px', color:'#CCC', fontSize:13 }}>Sem dados</div>
+                : porUnidade.map((u,i)=>(
                   <div key={i} style={{ padding:'10px 20px' }}>
                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
-                      <span style={{ fontSize:13.5, fontWeight:500, color:'#1a1a1a' }}>{u.loja}</span>
+                      <span style={{ fontSize:13.5, fontWeight:500 }}>{u.loja}</span>
                       <span style={{ fontSize:13.5, fontWeight:600, fontVariantNumeric:'tabular-nums' }}>{fmt(u.total)}</span>
                     </div>
                     <div style={{ height:3, background:'#F5F5F5', borderRadius:99 }}>
@@ -277,7 +225,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Alertas */}
           <div style={{ border:'1px solid #F0F0F0', borderRadius:12, overflow:'hidden' }}>
             <div style={{ padding:'16px 20px 14px', borderBottom:'1px solid #F7F7F7', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
               <div>
@@ -286,23 +233,18 @@ export default function Home() {
                 </div>
                 <div style={{ fontSize:12, color:'#999', marginTop:2 }}>Vencido e vence em 7 dias</div>
               </div>
-              {totalVencido > 0 && (
-                <span style={{ fontSize:13, fontWeight:600, color:'#dc2626', fontVariantNumeric:'tabular-nums' }}>
-                  {fmt(totalVencido)} vencido
-                </span>
-              )}
+              {totalVencido>0 && <span style={{ fontSize:13, fontWeight:600, color:'#dc2626', fontVariantNumeric:'tabular-nums' }}>{fmt(totalVencido)} vencido</span>}
             </div>
             <div style={{ padding:'0 20px', maxHeight:320, overflowY:'auto' }}>
-              {alertas.length === 0
+              {alertas.length===0
                 ? <div style={{ padding:'20px 0', color:'#CCC', fontSize:13 }}>Nenhuma conta crítica 🎉</div>
-                : alertas.map((c,i) => <AlertaItem key={i} conta={c}/>)
+                : alertas.map((c,i)=><AlertaItem key={i} conta={c}/>)
               }
             </div>
           </div>
-
         </div>
 
-        {/* ── Fora do escopo operacional ── */}
+        {/* Fora do escopo */}
         {dadosFora.total > 0 && (
           <div style={{ border:'1px solid #F0F0F0', borderRadius:12, overflow:'hidden' }}>
             <div style={{ padding:'16px 20px 14px', borderBottom:'1px solid #F7F7F7', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
@@ -312,16 +254,18 @@ export default function Home() {
               </div>
               <div style={{ fontSize:20, fontWeight:700, fontVariantNumeric:'tabular-nums', color:'#888' }}>{fmt(dadosFora.total)}</div>
             </div>
-            <div style={{ display:'grid', gridTemplateColumns:`repeat(${dadosFora.mesesFora.length||1}, 1fr)`, borderBottom:'1px solid #F7F7F7' }}>
-              {dadosFora.mesesFora.map(mes => (
-                <div key={mes} style={{ padding:'12px 16px', borderRight:'1px solid #F7F7F7', textAlign:'center' }}>
-                  <div style={{ fontSize:11, color:'#BBB', marginBottom:4 }}>{mes}</div>
-                  <div style={{ fontSize:14, fontWeight:600, fontVariantNumeric:'tabular-nums', color:'#888' }}>{fmt(dadosFora.porMes[mes]||0)}</div>
-                </div>
-              ))}
-            </div>
+            {dadosFora.mesesFora.length > 0 && (
+              <div style={{ display:'grid', gridTemplateColumns:`repeat(${dadosFora.mesesFora.length},1fr)`, borderBottom:'1px solid #F7F7F7' }}>
+                {dadosFora.mesesFora.map(mes=>(
+                  <div key={mes} style={{ padding:'12px 16px', borderRight:'1px solid #F7F7F7', textAlign:'center' }}>
+                    <div style={{ fontSize:11, color:'#BBB', marginBottom:4 }}>{mes}</div>
+                    <div style={{ fontSize:14, fontWeight:600, fontVariantNumeric:'tabular-nums', color:'#888' }}>{fmt(dadosFora.porMes[mes]||0)}</div>
+                  </div>
+                ))}
+              </div>
+            )}
             <div style={{ padding:'8px 0' }}>
-              {Object.entries(dadosFora.porCat).sort((a,b)=>b[1]-a[1]).map(([cat,val]) => (
+              {Object.entries(dadosFora.porCat).sort((a,b)=>b[1]-a[1]).map(([cat,val])=>(
                 <div key={cat} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'8px 20px' }}>
                   <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                     <span style={{ width:6, height:6, borderRadius:'50%', background:'#CCC', flexShrink:0 }}/>
@@ -333,6 +277,7 @@ export default function Home() {
             </div>
           </div>
         )}
+
       </div>
     </div>
   )
