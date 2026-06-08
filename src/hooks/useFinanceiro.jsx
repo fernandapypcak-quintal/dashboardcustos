@@ -192,6 +192,7 @@ export function FinanceiroProvider({ children }) {
       historicoCatVariavelFiltrado,
       historicoDetalheFixoFiltrado,
       historicoDetalheVariavelFiltrado,
+      historicoRaw,
       lojaFiltro, setLojaFiltro,
       mesFiltro,  setMesFiltro,
       tipoFiltro, setTipoFiltro,

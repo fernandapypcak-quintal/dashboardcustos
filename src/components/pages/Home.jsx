@@ -9,6 +9,21 @@ import { TrendingUp, TrendingDown, AlertTriangle, DollarSign, Activity, ArrowUp,
 
 // Card grande estilo faturamento
 function BigCard({ label, valor, sub, subColor, icon: Icon, iconBg, iconColor }) {
+  // ── Fora do escopo ───────────────────────────────────────────
+  const dadosFora = useMemo(() => {
+    const foraItems = (historicoRaw||[]).filter(h => h.tipo === 'Fora')
+    const foraLoja  = lojaFiltro !== 'Todas' ? foraItems.filter(h => h.loja === lojaFiltro) : foraItems
+    const porCat = {}, porMes = {}
+    foraLoja.forEach(({ categoria, mes, total_realizado }) => {
+      porCat[categoria] = (porCat[categoria]||0) + total_realizado
+      porMes[mes]       = (porMes[mes]||0)       + total_realizado
+    })
+    const mesesFora = sortMesLabel(Object.keys(porMes)).slice(-5)
+    const total = Object.values(porCat).reduce((s,v)=>s+v,0)
+    return { porCat, porMes, mesesFora, total }
+  }, [historicoRaw, lojaFiltro])
+
+
   return (
     <div style={{ background:'#fff', border:'1px solid #F0F0F0', borderRadius:12, padding:'20px 22px', display:'flex', flexDirection:'column', gap:12, minWidth:0 }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
@@ -54,7 +69,7 @@ function AlertaItem({ conta }) {
 
 export default function Home() {
   const {
-    contasFiltradas, lojaFiltro, mesFiltro,
+    contasFiltradas, lojaFiltro, mesFiltro, historicoRaw,
     historicoFiltrado, historicoVariavelFiltrado,
     historicoCatFixoFiltrado, historicoCatVariavelFiltrado,
   } = useFinanceiro()
@@ -130,6 +145,21 @@ export default function Home() {
   }, [contasFiltradas])
 
   const totalVencido = contasFiltradas.filter(c=>c.status==='vencido').reduce((s,c)=>s+c.valor,0)
+
+  // ── Fora do escopo ───────────────────────────────────────────
+  const dadosFora = useMemo(() => {
+    const foraItems = (historicoRaw||[]).filter(h => h.tipo === 'Fora')
+    const foraLoja  = lojaFiltro !== 'Todas' ? foraItems.filter(h => h.loja === lojaFiltro) : foraItems
+    const porCat = {}, porMes = {}
+    foraLoja.forEach(({ categoria, mes, total_realizado }) => {
+      porCat[categoria] = (porCat[categoria]||0) + total_realizado
+      porMes[mes]       = (porMes[mes]||0)       + total_realizado
+    })
+    const mesesFora = sortMesLabel(Object.keys(porMes)).slice(-5)
+    const total = Object.values(porCat).reduce((s,v)=>s+v,0)
+    return { porCat, porMes, mesesFora, total }
+  }, [historicoRaw, lojaFiltro])
+
 
   return (
     <div style={{ background:'#fff', minHeight:'100vh' }}>
@@ -271,6 +301,38 @@ export default function Home() {
           </div>
 
         </div>
+
+        {/* ── Fora do escopo operacional ── */}
+        {dadosFora.total > 0 && (
+          <div style={{ border:'1px solid #F0F0F0', borderRadius:12, overflow:'hidden' }}>
+            <div style={{ padding:'16px 20px 14px', borderBottom:'1px solid #F7F7F7', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <div>
+                <div style={{ fontSize:13, fontWeight:600, color:'#1a1a1a' }}>Fora do Escopo Operacional</div>
+                <div style={{ fontSize:12, color:'#999', marginTop:2 }}>Dividendos, mútuo, royalties, aplicações financeiras</div>
+              </div>
+              <div style={{ fontSize:20, fontWeight:700, fontVariantNumeric:'tabular-nums', color:'#888' }}>{fmt(dadosFora.total)}</div>
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:`repeat(${dadosFora.mesesFora.length||1}, 1fr)`, borderBottom:'1px solid #F7F7F7' }}>
+              {dadosFora.mesesFora.map(mes => (
+                <div key={mes} style={{ padding:'12px 16px', borderRight:'1px solid #F7F7F7', textAlign:'center' }}>
+                  <div style={{ fontSize:11, color:'#BBB', marginBottom:4 }}>{mes}</div>
+                  <div style={{ fontSize:14, fontWeight:600, fontVariantNumeric:'tabular-nums', color:'#888' }}>{fmt(dadosFora.porMes[mes]||0)}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ padding:'8px 0' }}>
+              {Object.entries(dadosFora.porCat).sort((a,b)=>b[1]-a[1]).map(([cat,val]) => (
+                <div key={cat} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'8px 20px' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    <span style={{ width:6, height:6, borderRadius:'50%', background:'#CCC', flexShrink:0 }}/>
+                    <span style={{ fontSize:13, color:'#555' }}>{cat}</span>
+                  </div>
+                  <span style={{ fontSize:13, fontWeight:500, fontVariantNumeric:'tabular-nums', color:'#888' }}>{fmt(val)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
