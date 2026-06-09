@@ -29,11 +29,15 @@ function VarBadge({ pct }) {
 
 export default function Evolucao() {
   const {
-    historico, historicoVariavel,
+    historicoRaw,
     historicoFiltrado, historicoVariavelFiltrado,
     historicoCatFixoFiltrado, historicoCatVariavelFiltrado,
     lojaFiltro,
   } = useFinanceiro()
+
+  // Deriva historico e historicoVariavel do raw para os gráficos por loja
+  const historico         = React.useMemo(() => (historicoRaw||[]).filter(h => h.tipo === 'Fixo'),    [historicoRaw])
+  const historicoVariavel = React.useMemo(() => (historicoRaw||[]).filter(h => h.tipo !== 'Fixo' && h.tipo !== 'Fora'), [historicoRaw])
 
   // ── 1. Total consolidado (fixo + variável) ───────────────────
   const consolidado = useMemo(() => {
