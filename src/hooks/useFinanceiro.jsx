@@ -3,6 +3,7 @@ import { loadContas, loadHistoricoUnificado, loadHistoricoCatUnificado, loadHist
 
 const FinanceiroCtx = createContext(null)
 
+// ── Ordem cronológica ─────────────────────────────────────────
 const ORDEM_MESES = [
   'Jan/24','Fev/24','Mar/24','Abr/24','Mai/24','Jun/24','Jul/24','Ago/24','Set/24','Out/24','Nov/24','Dez/24',
   'Jan/25','Fev/25','Mar/25','Abr/25','Mai/25','Jun/25','Jul/25','Ago/25','Set/25','Out/25','Nov/25','Dez/25',
@@ -10,9 +11,10 @@ const ORDEM_MESES = [
 ]
 
 export function sortMesLabel(arr) {
-  return [...arr].sort((a,b) => {
-    const ia = ORDEM_MESES.indexOf(a), ib = ORDEM_MESES.indexOf(b)
-    return (ia<0?999:ia) - (ib<0?999:ib)
+  return [...arr].sort((a, b) => {
+    const ia = ORDEM_MESES.indexOf(a)
+    const ib = ORDEM_MESES.indexOf(b)
+    return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib)
   })
 }
 
@@ -22,35 +24,33 @@ function normalizarMes(raw) {
   if (/^[A-Za-zÀ-ú]{3}\/\d{2}$/.test(s)) return s
   const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
   if (/^\d{4}-\d{2}/.test(s)) {
-    const [a,m] = s.split('-')
-    return `${MESES[parseInt(m)-1]}/${a.substring(2)}`
+    const [a, m] = s.split('-')
+    return `${MESES[parseInt(m) - 1]}/${a.substring(2)}`
   }
   const d = new Date(s)
-  if (!isNaN(d.getTime())) {
-    return `${MESES[d.getMonth()]}/${String(d.getFullYear()).substring(2)}`
-  }
+  if (!isNaN(d.getTime())) return `${MESES[d.getMonth()]}/${String(d.getFullYear()).substring(2)}`
   return s
 }
 
-// Grupos de tipos
+// ── Tipos ──────────────────────────────────────────────────────
 export const TIPO_GRUPOS = {
-  operacional: ['Fixo','Variável'],
-  comCapex:    ['Fixo','Variável','Investimento'],
-  tudo:        ['Fixo','Variável','Investimento','Fora'],
+  operacional: ['Fixo', 'Variável'],
+  comCapex:    ['Fixo', 'Variável', 'Investimento'],
+  tudo:        ['Fixo', 'Variável', 'Investimento', 'Fora'],
 }
 
-// Grupos de categorias para filtro rápido
+// ── Grupos de categorias ───────────────────────────────────────
 export const GRUPOS_CATEGORIA = {
   todos:       null,
-  pessoal:     ['Folha','Encargos','Benefícios','RH / Treinamento'],
-  ocupacao:    ['Aluguel','Utilidades','Infraestrutura'],
-  operacional: ['CMV','Embalagens','Mão de Obra Variável','Comissões'],
-  fiscal:      ['Impostos','Financeiro','Rateio Holding'],
-  comercial:   ['Marketing','Administrativo','Tecnologia','Jurídico'],
+  pessoal:     ['Folha', 'Encargos', 'Benefícios', 'RH / Treinamento'],
+  ocupacao:    ['Aluguel', 'Utilidades', 'Infraestrutura'],
+  operacional: ['CMV', 'Embalagens', 'Mão de Obra Variável', 'Comissões'],
+  fiscal:      ['Impostos', 'Financeiro', 'Rateio Holding'],
+  comercial:   ['Marketing', 'Administrativo', 'Tecnologia', 'Jurídico'],
 }
 
 export function FinanceiroProvider({ children }) {
-  // Dados brutos — carregados uma vez
+  // ── Dados brutos ──────────────────────────────────────────
   const [contas,          setContas]          = useState([])
   const [historicoRaw,    setHistoricoRaw]    = useState([])
   const [historicoCatRaw, setHistoricoCatRaw] = useState([])
@@ -58,11 +58,15 @@ export function FinanceiroProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState(null)
 
-  // Filtros
-  const [lojaFiltro, setLojaFiltro] = useState('Todas')
-  const [mesFiltro,  setMesFiltro]  = useState('')
-  const [tipoFiltro, setTipoFiltro] = useState('operacional')
+  // ── Filtros ───────────────────────────────────────────────
+  const [lojaFiltro,     setLojaFiltro]     = useState('Todas')
+  const [mesFiltro,      setMesFiltro]      = useState('')
+  const [tipoFiltro,     setTipoFiltro]     = useState('operacional')
+  const [mesInicio,      setMesInicio]      = useState('')
+  const [mesFim,         setMesFim]         = useState('')
+  const [grupoCategoria, setGrupoCategoria] = useState('todos')
 
+  // ── Carregamento inicial ──────────────────────────────────
   useEffect(() => {
     Promise.all([
       loadContas(),
@@ -77,8 +81,8 @@ export function FinanceiroProvider({ children }) {
       const hcN = normH(hc)
       const hdN = normH(hd)
 
-      const todosMeses = sortMesLabel([...new Set(hN.map(x=>x.mes).filter(Boolean))])
-      const mesPadrao  = todosMeses[todosMeses.length-1] || ''
+      const todosMeses = sortMesLabel([...new Set(hN.map(x => x.mes).filter(Boolean))])
+      const mesPadrao  = todosMeses[todosMeses.length - 1] || ''
 
       setContas(safe(c))
       setHistoricoRaw(hN)
@@ -86,43 +90,39 @@ export function FinanceiroProvider({ children }) {
       setHistoricoDetRaw(hdN)
       setMesFiltro(mesPadrao)
       setMesFim(mesPadrao)
-      if (todosMeses.length > 1) setMesInicio(todosMeses[0])
-      else setMesInicio(mesPadrao)
+      setMesInicio(todosMeses.length > 1 ? todosMeses[0] : mesPadrao)
 
-      console.log('[Financeiro] Carregado —', hN.length, 'entradas históricas | meses:', todosMeses)
+      console.log('[Financeiro] OK — meses:', todosMeses)
     })
     .catch(e => { console.error('[Financeiro] Erro:', e); setError(e.message) })
     .finally(() => setLoading(false))
   }, [])
 
-  const tiposAtivos = TIPO_GRUPOS[tipoFiltro] || TIPO_GRUPOS.operacional
+  // ── Derived ───────────────────────────────────────────────
+  const tiposAtivos      = TIPO_GRUPOS[tipoFiltro] || TIPO_GRUPOS.operacional
+  const categoriasAtivas = GRUPOS_CATEGORIA[grupoCategoria] || null
 
-  // ── Helpers de filtro ────────────────────────────────────────
-  const categoriasAtivas = grupoCategoria === 'todos' ? null : (GRUPOS_CATEGORIA[grupoCategoria] || null)
+  // Filtra por loja
+  const porLoja = arr => lojaFiltro === 'Todas' ? arr : arr.filter(h => h.loja === lojaFiltro)
 
-  const filtrarCat = (arr) => {
+  // Filtra por intervalo de meses
+  const porPeriodo = arr => {
+    if (!mesInicio && !mesFim) return arr
+    return arr.filter(h => {
+      const im = ORDEM_MESES.indexOf(h.mes)
+      const ii = mesInicio ? ORDEM_MESES.indexOf(mesInicio) : 0
+      const ifm = mesFim   ? ORDEM_MESES.indexOf(mesFim)   : 9999
+      return im >= ii && im <= ifm
+    })
+  }
+
+  // Filtra por categorias do grupo
+  const porGrupo = arr => {
     if (!categoriasAtivas) return arr
     return arr.filter(h => categoriasAtivas.includes(h.categoria))
   }
 
-  const filtrarMesRange = (arr) => {
-    if (!mesInicio && !mesFim) return arr
-    const ordem = ORDEM_MESES
-    return arr.filter(h => {
-      const im = ordem.indexOf(h.mes)
-      const ii = mesInicio ? ordem.indexOf(mesInicio) : 0
-      const if_ = mesFim   ? ordem.indexOf(mesFim)   : 9999
-      return im >= ii && im <= if_
-    })
-  }
-
-  const filtrarHist = (arr) => {
-    let r = arr.filter(h => tiposAtivos.includes(h.tipo))
-    if (lojaFiltro !== 'Todas') r = r.filter(h => h.loja === lojaFiltro)
-    return r
-  }
-
-  // ── historico agregado — sempre arrays ──────────────────────
+  // ── Histórico agregado (para gráficos) ───────────────────
   const historicoFiltrado = useMemo(() => {
     const map = {}
     historicoRaw
@@ -130,12 +130,12 @@ export function FinanceiroProvider({ children }) {
       .filter(h => lojaFiltro === 'Todas' || h.loja === lojaFiltro)
       .forEach(h => {
         const key = h.mes + '||' + h.loja
-        if (!map[key]) map[key] = { mes:h.mes, loja:h.loja, total_realizado:0 }
+        if (!map[key]) map[key] = { mes: h.mes, loja: h.loja, total_realizado: 0 }
         map[key].total_realizado += h.total_realizado
       })
-    const arr = Object.values(map)
-    const ordem = sortMesLabel(arr.map(x=>x.mes))
-    return arr.sort((a,b) => ordem.indexOf(a.mes) - ordem.indexOf(b.mes))
+    const arr   = Object.values(map)
+    const ordem = sortMesLabel(arr.map(x => x.mes))
+    return arr.sort((a, b) => ordem.indexOf(a.mes) - ordem.indexOf(b.mes))
   }, [historicoRaw, lojaFiltro])
 
   const historicoVariavelFiltrado = useMemo(() => {
@@ -146,47 +146,35 @@ export function FinanceiroProvider({ children }) {
       .filter(h => lojaFiltro === 'Todas' || h.loja === lojaFiltro)
       .forEach(h => {
         const key = h.mes + '||' + h.loja
-        if (!map[key]) map[key] = { mes:h.mes, loja:h.loja, total_realizado:0 }
+        if (!map[key]) map[key] = { mes: h.mes, loja: h.loja, total_realizado: 0 }
         map[key].total_realizado += h.total_realizado
       })
-    const arr = Object.values(map)
-    const ordem = sortMesLabel(arr.map(x=>x.mes))
-    return arr.sort((a,b) => ordem.indexOf(a.mes) - ordem.indexOf(b.mes))
+    const arr   = Object.values(map)
+    const ordem = sortMesLabel(arr.map(x => x.mes))
+    return arr.sort((a, b) => ordem.indexOf(a.mes) - ordem.indexOf(b.mes))
   }, [historicoRaw, lojaFiltro, tiposAtivos])
 
-  // ── historicoCat filtrado ────────────────────────────────────
-  const historicoCatFixoFiltrado = useMemo(() => {
-    let r = historicoCatRaw.filter(h => h.tipo === 'Fixo')
-    if (lojaFiltro !== 'Todas') r = r.filter(h => h.loja === lojaFiltro)
-    r = filtrarCat(r)
-    r = filtrarMesRange(r)
-    return r
-  }, [historicoCatRaw, lojaFiltro, categoriasAtivas, mesInicio, mesFim])
+  // ── historicoCat filtrado ─────────────────────────────────
+  const historicoCatFixoFiltrado = useMemo(() => (
+    porGrupo(porPeriodo(porLoja(historicoCatRaw.filter(h => h.tipo === 'Fixo'))))
+  ), [historicoCatRaw, lojaFiltro, categoriasAtivas, mesInicio, mesFim])
 
   const historicoCatVariavelFiltrado = useMemo(() => {
     const tiposVar = tiposAtivos.filter(t => t !== 'Fixo')
-    let r = historicoCatRaw.filter(h => tiposVar.includes(h.tipo))
-    if (lojaFiltro !== 'Todas') r = r.filter(h => h.loja === lojaFiltro)
-    r = filtrarCat(r)
-    r = filtrarMesRange(r)
-    return r
+    return porGrupo(porPeriodo(porLoja(historicoCatRaw.filter(h => tiposVar.includes(h.tipo)))))
   }, [historicoCatRaw, lojaFiltro, tiposAtivos, categoriasAtivas, mesInicio, mesFim])
 
-  // ── historicoDetalhe filtrado ────────────────────────────────
-  const historicoDetalheFixoFiltrado = useMemo(() => {
-    let r = historicoDetRaw.filter(h => h.tipo === 'Fixo')
-    if (lojaFiltro !== 'Todas') r = r.filter(h => h.loja === lojaFiltro)
-    return r
-  }, [historicoDetRaw, lojaFiltro])
+  // ── historicoDetalhe filtrado ─────────────────────────────
+  const historicoDetalheFixoFiltrado = useMemo(() => (
+    porPeriodo(porLoja(historicoDetRaw.filter(h => h.tipo === 'Fixo')))
+  ), [historicoDetRaw, lojaFiltro, mesInicio, mesFim])
 
   const historicoDetalheVariavelFiltrado = useMemo(() => {
     const tiposVar = tiposAtivos.filter(t => t !== 'Fixo')
-    let r = historicoDetRaw.filter(h => tiposVar.includes(h.tipo))
-    if (lojaFiltro !== 'Todas') r = r.filter(h => h.loja === lojaFiltro)
-    return r
-  }, [historicoDetRaw, lojaFiltro, tiposAtivos])
+    return porPeriodo(porLoja(historicoDetRaw.filter(h => tiposVar.includes(h.tipo))))
+  }, [historicoDetRaw, lojaFiltro, tiposAtivos, mesInicio, mesFim])
 
-  // ── Contas ───────────────────────────────────────────────────
+  // ── Contas ────────────────────────────────────────────────
   const contasFiltradas = useMemo(() => {
     let r = contas
     if (lojaFiltro !== 'Todas') r = r.filter(c => c.centro === lojaFiltro)
@@ -194,47 +182,45 @@ export function FinanceiroProvider({ children }) {
     return r
   }, [contas, lojaFiltro, tiposAtivos])
 
-  // ── Meses disponíveis ────────────────────────────────────────
+  // ── Meses disponíveis ─────────────────────────────────────
   const mesesDisponiveis = useMemo(() => {
-    const set = new Set(historicoRaw.map(h=>h.mes).filter(Boolean))
-    return sortMesLabel(Array.from(set)).map(m => ({ value:m, label:m }))
+    const set = new Set(historicoRaw.map(h => h.mes).filter(Boolean))
+    return sortMesLabel(Array.from(set)).map(m => ({ value: m, label: m }))
   }, [historicoRaw])
 
-  // ── KPIs contas ──────────────────────────────────────────────
+  // ── KPIs contas ───────────────────────────────────────────
   const kpis = useMemo(() => {
-    const hoje = new Date(); hoje.setHours(0,0,0,0)
-    const em7d = new Date(hoje.getTime()+7*86400000)
-    const totalAPagar  = contasFiltradas.filter(c=>c.status!=='pago').reduce((s,c)=>s+c.valor,0)
-    const totalVencido = contasFiltradas.filter(c=>c.status==='vencido').reduce((s,c)=>s+c.valor,0)
-    const aVencer7d    = contasFiltradas.filter(c=>{
-      if (c.status==='pago') return false
-      const d=new Date(c.vencimento); return d>=hoje&&d<=em7d
-    }).reduce((s,c)=>s+c.valor,0)
-    return { totalAPagar, totalVencido, aVencer7d }
+    const hoje = new Date(); hoje.setHours(0, 0, 0, 0)
+    const em7d = new Date(hoje.getTime() + 7 * 86400000)
+    return {
+      totalAPagar:  contasFiltradas.filter(c => c.status !== 'pago').reduce((s,c) => s+c.valor, 0),
+      totalVencido: contasFiltradas.filter(c => c.status === 'vencido').reduce((s,c) => s+c.valor, 0),
+      aVencer7d:    contasFiltradas.filter(c => c.status !== 'pago' && (() => { const d=new Date(c.vencimento); return d>=hoje&&d<=em7d })()).reduce((s,c) => s+c.valor, 0),
+    }
   }, [contasFiltradas])
 
   return (
     <FinanceiroCtx.Provider value={{
       loading, error,
       contas, contasFiltradas,
+      historicoRaw, historicoCatRaw,
       historicoFiltrado,
       historicoVariavelFiltrado,
       historicoCatFixoFiltrado,
       historicoCatVariavelFiltrado,
       historicoDetalheFixoFiltrado,
       historicoDetalheVariavelFiltrado,
-      historicoRaw,
-      lojaFiltro, setLojaFiltro,
-      mesFiltro,  setMesFiltro,
-      tipoFiltro, setTipoFiltro,
-      mesInicio, setMesInicio,
-      mesFim,    setMesFim,
+      lojaFiltro,     setLojaFiltro,
+      mesFiltro,      setMesFiltro,
+      tipoFiltro,     setTipoFiltro,
+      mesInicio,      setMesInicio,
+      mesFim,         setMesFim,
       grupoCategoria, setGrupoCategoria,
-      categoriasAtivas,
       tiposAtivos,
+      categoriasAtivas,
       mesesDisponiveis,
       kpis,
-      // aliases para compatibilidade com páginas antigas
+      // aliases de compatibilidade
       custosFiltrados:          [],
       custosVariaveisFiltrados: [],
     }}>
