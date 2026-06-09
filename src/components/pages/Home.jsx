@@ -4,6 +4,7 @@ import Header from '../layout/Header.jsx'
 import StatusBadge from '../ui/StatusBadge.jsx'
 import { fmt, fmtPct, diasAteVencimento } from '../../utils.js'
 import Semaforos from '../ui/Semaforos.jsx'
+import HeatmapLojas from '../ui/HeatmapLojas.jsx'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { TrendingUp, TrendingDown, AlertTriangle, DollarSign, Activity, ArrowUp, ArrowDown } from 'lucide-react'
 
@@ -52,10 +53,12 @@ export default function Home() {
     contasFiltradas, lojaFiltro,
     historicoFiltrado, historicoVariavelFiltrado,
     historicoCatFixoFiltrado, historicoCatVariavelFiltrado,
-    historicoRaw,
+    historicoRaw, setLojaFiltro,
   } = useFinanceiro()
 
   const hoje = new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long', year:'numeric' })
+
+  const [ytdMode, setYtdMode] = React.useState(false)
 
   // ── Evolução gráfico ─────────────────────────────────────
   const evolucao = useMemo(() => {
@@ -69,8 +72,15 @@ export default function Home() {
     const vals = Object.values(map)
     const ordem = sortMesLabel(vals.map(x=>x.mes))
     vals.sort((a,b) => ordem.indexOf(a.mes) - ordem.indexOf(b.mes))
-    return vals.slice(-6)
-  }, [historicoFiltrado, historicoVariavelFiltrado])
+    const base = vals.slice(-6)
+    if (!ytdMode) return base
+    // Acumulado
+    let accFixo = 0, accVar = 0
+    return base.map(r => {
+      accFixo += r.fixo; accVar += r.variavel
+      return { mes:r.mes, fixo:accFixo, variavel:accVar }
+    })
+  }, [historicoFiltrado, historicoVariavelFiltrado, ytdMode])
 
   // ── KPIs ─────────────────────────────────────────────────
   const { totalMes, variacaoPct, variacaoR, mesMostrado } = useMemo(() => {
@@ -180,9 +190,15 @@ export default function Home() {
               <div style={{ fontSize:13, fontWeight:600, color:'#1a1a1a' }}>Evolução de Custo</div>
               <div style={{ fontSize:12, color:'#999', marginTop:2 }}>{lojaFiltro} · últimos 6 meses</div>
             </div>
-            <div style={{ display:'flex', gap:16, fontSize:12, color:'#999', alignItems:'center' }}>
-              <span style={{ display:'flex', alignItems:'center', gap:6 }}><span style={{ width:12, height:2, background:'#1a1a1a', display:'inline-block', borderRadius:1 }}/>Custo Fixo</span>
-              <span style={{ display:'flex', alignItems:'center', gap:6 }}><span style={{ width:12, height:2, background:'#22c55e', display:'inline-block', borderRadius:1 }}/>Custo Variável</span>
+            <div style={{ display:'flex', gap:12, alignItems:'center' }}>
+              <div style={{ display:'flex', gap:4, background:'#F7F7F7', borderRadius:99, padding:'3px' }}>
+                <button onClick={() => setYtdMode(false)} style={{ padding:'3px 10px', borderRadius:99, border:'none', fontSize:11.5, cursor:'pointer', fontFamily:'inherit', background:!ytdMode?'#1a1a1a':'transparent', color:!ytdMode?'#fff':'#777', fontWeight:!ytdMode?600:400 }}>Mês a mês</button>
+                <button onClick={() => setYtdMode(true)}  style={{ padding:'3px 10px', borderRadius:99, border:'none', fontSize:11.5, cursor:'pointer', fontFamily:'inherit', background:ytdMode?'#1a1a1a':'transparent',  color:ytdMode?'#fff':'#777',  fontWeight:ytdMode?600:400  }}>Acumulado</button>
+              </div>
+              <div style={{ display:'flex', gap:12, fontSize:12, color:'#999' }}>
+                <span style={{ display:'flex', alignItems:'center', gap:6 }}><span style={{ width:12, height:2, background:'#1a1a1a', display:'inline-block', borderRadius:1 }}/>Fixo</span>
+                <span style={{ display:'flex', alignItems:'center', gap:6 }}><span style={{ width:12, height:2, background:'#22c55e', display:'inline-block', borderRadius:1 }}/>Variável</span>
+              </div>
             </div>
           </div>
           <ResponsiveContainer width="100%" height={220}>
@@ -217,9 +233,16 @@ export default function Home() {
               {porUnidade.length===0
                 ? <div style={{ padding:'20px', color:'#CCC', fontSize:13 }}>Sem dados</div>
                 : porUnidade.map((u,i)=>(
-                  <div key={i} style={{ padding:'10px 20px' }}>
+                  <div key={i} style={{ padding:'10px 20px', cursor:'pointer', transition:'background 0.1s' }}
+                    onClick={() => setLojaFiltro(u.loja)}
+                    onMouseEnter={e => e.currentTarget.style.background='#FAFAFA'}
+                    onMouseLeave={e => e.currentTarget.style.background='transparent'}
+                  >
                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
-                      <span style={{ fontSize:13.5, fontWeight:500 }}>{u.loja}</span>
+                      <span style={{ fontSize:13.5, fontWeight:500, display:'flex', alignItems:'center', gap:6 }}>
+                        {u.loja}
+                        <span style={{ fontSize:10, color:'#CCC' }}>→ filtrar</span>
+                      </span>
                       <span style={{ fontSize:13.5, fontWeight:600, fontVariantNumeric:'tabular-nums' }}>{fmt(u.total)}</span>
                     </div>
                     <div style={{ height:3, background:'#F5F5F5', borderRadius:99 }}>
@@ -250,6 +273,11 @@ export default function Home() {
             </div>
           </div>
         </div>
+
+        {/* Heatmap */}
+        {lojaFiltro === 'Todas' && (
+          <HeatmapLojas historicoCatRaw={[...historicoCatFixoFiltrado, ...historicoCatVariavelFiltrado]}/>
+        )}
 
         {/* Fora do escopo */}
         {dadosFora.total > 0 && (

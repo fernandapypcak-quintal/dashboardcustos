@@ -39,6 +39,16 @@ export const TIPO_GRUPOS = {
   tudo:        ['Fixo','Variável','Investimento','Fora'],
 }
 
+// Grupos de categorias para filtro rápido
+export const GRUPOS_CATEGORIA = {
+  todos:       null,
+  pessoal:     ['Folha','Encargos','Benefícios','RH / Treinamento'],
+  ocupacao:    ['Aluguel','Utilidades','Infraestrutura'],
+  operacional: ['CMV','Embalagens','Mão de Obra Variável','Comissões'],
+  fiscal:      ['Impostos','Financeiro','Rateio Holding'],
+  comercial:   ['Marketing','Administrativo','Tecnologia','Jurídico'],
+}
+
 export function FinanceiroProvider({ children }) {
   // Dados brutos — carregados uma vez
   const [contas,          setContas]          = useState([])
@@ -75,6 +85,9 @@ export function FinanceiroProvider({ children }) {
       setHistoricoCatRaw(hcN)
       setHistoricoDetRaw(hdN)
       setMesFiltro(mesPadrao)
+      setMesFim(mesPadrao)
+      if (todosMeses.length > 1) setMesInicio(todosMeses[0])
+      else setMesInicio(mesPadrao)
 
       console.log('[Financeiro] Carregado —', hN.length, 'entradas históricas | meses:', todosMeses)
     })
@@ -85,6 +98,24 @@ export function FinanceiroProvider({ children }) {
   const tiposAtivos = TIPO_GRUPOS[tipoFiltro] || TIPO_GRUPOS.operacional
 
   // ── Helpers de filtro ────────────────────────────────────────
+  const categoriasAtivas = grupoCategoria === 'todos' ? null : (GRUPOS_CATEGORIA[grupoCategoria] || null)
+
+  const filtrarCat = (arr) => {
+    if (!categoriasAtivas) return arr
+    return arr.filter(h => categoriasAtivas.includes(h.categoria))
+  }
+
+  const filtrarMesRange = (arr) => {
+    if (!mesInicio && !mesFim) return arr
+    const ordem = ORDEM_MESES
+    return arr.filter(h => {
+      const im = ordem.indexOf(h.mes)
+      const ii = mesInicio ? ordem.indexOf(mesInicio) : 0
+      const if_ = mesFim   ? ordem.indexOf(mesFim)   : 9999
+      return im >= ii && im <= if_
+    })
+  }
+
   const filtrarHist = (arr) => {
     let r = arr.filter(h => tiposAtivos.includes(h.tipo))
     if (lojaFiltro !== 'Todas') r = r.filter(h => h.loja === lojaFiltro)
@@ -127,15 +158,19 @@ export function FinanceiroProvider({ children }) {
   const historicoCatFixoFiltrado = useMemo(() => {
     let r = historicoCatRaw.filter(h => h.tipo === 'Fixo')
     if (lojaFiltro !== 'Todas') r = r.filter(h => h.loja === lojaFiltro)
+    r = filtrarCat(r)
+    r = filtrarMesRange(r)
     return r
-  }, [historicoCatRaw, lojaFiltro])
+  }, [historicoCatRaw, lojaFiltro, categoriasAtivas, mesInicio, mesFim])
 
   const historicoCatVariavelFiltrado = useMemo(() => {
     const tiposVar = tiposAtivos.filter(t => t !== 'Fixo')
     let r = historicoCatRaw.filter(h => tiposVar.includes(h.tipo))
     if (lojaFiltro !== 'Todas') r = r.filter(h => h.loja === lojaFiltro)
+    r = filtrarCat(r)
+    r = filtrarMesRange(r)
     return r
-  }, [historicoCatRaw, lojaFiltro, tiposAtivos])
+  }, [historicoCatRaw, lojaFiltro, tiposAtivos, categoriasAtivas, mesInicio, mesFim])
 
   // ── historicoDetalhe filtrado ────────────────────────────────
   const historicoDetalheFixoFiltrado = useMemo(() => {
@@ -192,6 +227,10 @@ export function FinanceiroProvider({ children }) {
       lojaFiltro, setLojaFiltro,
       mesFiltro,  setMesFiltro,
       tipoFiltro, setTipoFiltro,
+      mesInicio, setMesInicio,
+      mesFim,    setMesFim,
+      grupoCategoria, setGrupoCategoria,
+      categoriasAtivas,
       tiposAtivos,
       mesesDisponiveis,
       kpis,
